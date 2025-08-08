@@ -92,6 +92,21 @@ export class MaterialRateService {
     rates: MaterialRate[];
     pagination: any;
   }> {
-    return await this.materialRateDAO.findAll(filters);
+    const result = await this.materialRateDAO.findAll(filters);
+
+    const { page = 1, limit = 10 } = filters;
+    const totalPages = Math.ceil(result.total / limit);
+
+    return {
+      rates: result.rates,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems: result.total,
+        itemsPerPage: limit,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
   }
 }

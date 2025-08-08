@@ -16,21 +16,17 @@ export class DashboardController {
         return ResponseUtil.unauthorized(res, "Authentication required");
       }
 
-      const period = (req.query.period as string) || "month";
       const startDate = req.query.startDate
         ? new Date(req.query.startDate as string)
         : undefined;
       const endDate = req.query.endDate
         ? new Date(req.query.endDate as string)
         : undefined;
-      const userId = req.query.userId as string;
 
-      const summary = await this.dashboardService.getDashboardSummary(
+      const summary = await this.dashboardService.getDashboardStats(
         req.organizationId,
-        period,
         startDate,
-        endDate,
-        userId
+        endDate
       );
 
       return ResponseUtil.success(
@@ -39,8 +35,8 @@ export class DashboardController {
         "Dashboard summary retrieved successfully"
       );
     } catch (error: any) {
-      console.error("Get dashboard summary error:", error);
-      return ResponseUtil.error(res, error.message);
+      console.error("Error getting dashboard summary:", error);
+      return ResponseUtil.error(res, "Failed to retrieve dashboard summary");
     }
   };
 
@@ -50,13 +46,17 @@ export class DashboardController {
         return ResponseUtil.unauthorized(res, "Authentication required");
       }
 
-      const period = (req.query.period as string) || "month";
-      const userId = req.query.userId as string;
+      const startDate = req.query.startDate
+        ? new Date(req.query.startDate as string)
+        : undefined;
+      const endDate = req.query.endDate
+        ? new Date(req.query.endDate as string)
+        : undefined;
 
-      const metrics = await this.dashboardService.getFinancialMetrics(
+      const metrics = await this.dashboardService.getRevenueByMaterial(
         req.organizationId,
-        period,
-        userId
+        startDate,
+        endDate
       );
 
       return ResponseUtil.success(
@@ -76,11 +76,13 @@ export class DashboardController {
         return ResponseUtil.unauthorized(res, "Authentication required");
       }
 
-      const period = (req.query.period as string) || "month";
+      const year = req.query.year
+        ? parseInt(req.query.year as string)
+        : new Date().getFullYear();
 
-      const stats = await this.dashboardService.getDashboardStats(
+      const stats = await this.dashboardService.getMonthlyRevenue(
         req.organizationId,
-        period
+        year
       );
 
       return ResponseUtil.success(
