@@ -1,157 +1,192 @@
-import { EntryStatus, EntryType, PrismaClient, UserRole } from "@prisma/client";
+// Production Database Seeding Script for Prisma
+import { PrismaClient, UserRole } from "@prisma/client";
+import * as bcrypt from "bcrypt";
+import * as dotenv from "dotenv";
+
+// Load environment variables
+dotenv.config();
 
 const prisma = new PrismaClient();
 
+// Seed organization and admin user
+const seedOrganizationAndAdmin = async () => {
+  try {
+    const adminEmail = process.env.ADMIN_EMAIL || "raj@gmail.com";
+    const adminPassword = process.env.ADMIN_PASSWORD || "Test@123";
+    const adminUsername = process.env.ADMIN_USERNAME || "raj";
+
+    // Check if admin already exists
+    const existingAdmin = await prisma.user.findUnique({
+      where: { username: adminUsername },
+      include: { organization: true },
+    });
+
+    if (existingAdmin) {
+      console.log(`👤 Admin user already exists: ${adminUsername}`);
+      return existingAdmin;
+    }
+
+    // Hash password
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(adminPassword, saltRounds);
+
+    // Create admin user first (without organization)
+    const adminUser = await prisma.user.create({
+      data: {
+        username: adminUsername,
+        passwordHash: passwordHash,
+        role: UserRole.owner,
+        isActive: true,
+      },
+    });
+
+    console.log(`✅ Admin user created: ${adminUsername}`);
+
+    // Create organization with the admin user as owner
+    const organization = await prisma.organization.create({
+      data: {
+        name: "CrusherMate Operations",
+        ownerId: adminUser.id,
+      },
+    });
+
+    console.log(`✅ Organization created: ${organization.name}`);
+
+    // Update admin user with organization
+    const updatedAdminUser = await prisma.user.update({
+      where: { id: adminUser.id },
+      data: { organizationId: organization.id },
+    });
+
+    return updatedAdminUser;
+  } catch (error) {
+    console.error("❌ Error creating admin user:", error);
+    throw error;
+  }
+};
+
+// Seed material rates
+const seedMaterialRates = async (adminUser: any) => {
+  try {
+    const defaultRates = [
+      {
+        materialType: "M-Sand",
+        currentRate: 22000,
+        notes: "Market rate for M-Sand per unit",
+      },
+      {
+        materialType: "P-Sand",
+        currentRate: 20000,
+        notes: "Market rate for P-Sand per unit",
+      },
+      {
+        materialType: "Blue Metal 0.5in",
+        currentRate: 24000,
+        notes: "Market rate for Blue Metal 0.5in per unit",
+      },
+      {
+        materialType: "Blue Metal 0.75in",
+        currentRate: 25000,
+        notes: "Market rate for Blue Metal 0.75in per unit",
+      },
+      {
+        materialType: "Jally",
+        currentRate: 18000,
+        notes: "Market rate for Jally per unit",
+      },
+      {
+        materialType: "Kurunai",
+        currentRate: 16000,
+        notes: "Market rate for Kurunai per unit",
+      },
+      {
+        materialType: "Mixed",
+        currentRate: 20000,
+        notes: "Market rate for Mixed materials per unit",
+      },
+    ];
+
+    for (const rate of defaultRates) {
+      const existingRate = await prisma.materialRate.findFirst({
+        where: {
+          materialType: rate.materialType,
+          organizationId: adminUser.organizationId,
+        },
+      });
+
+      if (!existingRate) {
+        await prisma.materialRate.create({
+          data: {
+            materialType: rate.materialType,
+            ratePerUnit: rate.currentRate,
+            unitType: "Load",
+            organizationId: adminUser.organizationId,
+            isActive: true,
+          },
+        });
+        console.log(
+          `✅ Created rate for ${rate.materialType}: ₹${rate.currentRate}`
+        );
+      } else {
+        console.log(
+          `📝 Rate already exists for ${rate.materialType}: ₹${existingRate.ratePerUnit}`
+        );
+      }
+    }
+  } catch (error) {
+    console.error("❌ Error seeding material rates:", error);
+    throw error;
+  }
+};
+
+// Main seeding function
 async function main() {
-  console.log("Starting database seed...");
+  try {
+    console.log("🌱 Starting production database seeding...");
+    console.log(
+      `📊 Database URL: ${process.env.DATABASE_URL?.replace(
+        /\/\/.*@/,
+        "//***:***@"
+      )}`
+    );
 
-  // Create a sample organization owner
-  const owner = await prisma.user.upsert({
-    where: { username: "admin" },
-    update: {},
-    create: {
-      username: "admin",
-      passwordHash: "$2b$10$example.hash.here", // In real app, use bcrypt to hash passwords
-      role: UserRole.owner,
-      isActive: true,
-    },
-  });
+    // Test database connection
+    await prisma.$connect();
+    console.log("✅ Connected to production PostgreSQL database");
 
-  // Create the organization
-  const organization = await prisma.organization.upsert({
-    where: { ownerId: owner.id },
-    update: {},
-    create: {
-      name: "Sample Crusher Organization",
-      ownerId: owner.id,
-    },
-  });
+    // Seed admin user and organization
+    const adminUser = await seedOrganizationAndAdmin();
 
-  // Create a regular user
-  const user = await prisma.user.upsert({
-    where: { username: "user1" },
-    update: {},
-    create: {
-      username: "user1",
-      passwordHash: "$2b$10$example.hash.here",
-      role: UserRole.user,
-      organizationId: organization.id,
-      isActive: true,
-    },
-  });
+    // Seed material rates
+    await seedMaterialRates(adminUser);
 
-  // Create material rates
-  const materialRate1 = await prisma.materialRate.upsert({
-    where: {
-      organizationId_materialType: {
-        organizationId: organization.id,
-        materialType: "Sand",
-      },
-    },
-    update: {},
-    create: {
-      organizationId: organization.id,
-      materialType: "Sand",
-      ratePerUnit: 1200.0,
-      unitType: "Load",
-      isActive: true,
-    },
-  });
+    console.log("🎉 Production database seeding completed successfully!");
+    console.log("\n📋 Summary:");
+    console.log(
+      `👤 Admin User: ${adminUser.username} (role: ${adminUser.role})`
+    );
+    console.log(`🏢 Organization ID: ${adminUser.organizationId}`);
 
-  const materialRate2 = await prisma.materialRate.upsert({
-    where: {
-      organizationId_materialType: {
-        organizationId: organization.id,
-        materialType: "Stone",
-      },
-    },
-    update: {},
-    create: {
-      organizationId: organization.id,
-      materialType: "Stone",
-      ratePerUnit: 1500.0,
-      unitType: "Load",
-      isActive: true,
-    },
-  });
+    console.log("\n🔐 Login Credentials:");
+    console.log(
+      `Username: ${adminUser.username} / Password: ${
+        process.env.ADMIN_PASSWORD || "Test@123"
+      }`
+    );
 
-  // Create sample truck entries
-  const truckEntry1 = await prisma.truckEntry.create({
-    data: {
-      organizationId: organization.id,
-      userId: user.id,
-      truckNumber: "TN-01-AB-1234",
-      truckName: "Ashok Leyland",
-      entryType: EntryType.Sales,
-      materialType: "Sand",
-      units: 2.5,
-      ratePerUnit: 1200.0,
-      totalAmount: 3000.0,
-      entryDate: new Date("2025-08-07"),
-      entryTime: new Date("2025-08-07T10:30:00"),
-      status: EntryStatus.active,
-      notes: "Morning delivery to construction site",
-    },
-  });
+    // Display some statistics
+    const totalUsers = await prisma.user.count();
+    const totalOrganizations = await prisma.organization.count();
+    const totalRates = await prisma.materialRate.count();
 
-  const truckEntry2 = await prisma.truckEntry.create({
-    data: {
-      organizationId: organization.id,
-      userId: user.id,
-      truckNumber: "TN-02-CD-5678",
-      truckName: "Tata 1212",
-      entryType: EntryType.RawStone,
-      materialType: "Stone",
-      units: 1.0,
-      ratePerUnit: 1500.0,
-      totalAmount: 1500.0,
-      entryDate: new Date("2025-08-07"),
-      entryTime: new Date("2025-08-07T14:15:00"),
-      status: EntryStatus.active,
-      notes: "Raw stone delivery from quarry",
-    },
-  });
-
-  // Create sample other expenses
-  const expense1 = await prisma.otherExpense.create({
-    data: {
-      organizationId: organization.id,
-      userId: user.id,
-      expenseType: "Fuel",
-      amount: 2500.0,
-      description: "Diesel for truck operations",
-      date: new Date("2025-08-07"),
-      isActive: true,
-    },
-  });
-
-  const expense2 = await prisma.otherExpense.create({
-    data: {
-      organizationId: organization.id,
-      userId: owner.id,
-      expenseType: "Maintenance",
-      amount: 1800.0,
-      description: "Truck servicing and repairs",
-      date: new Date("2025-08-06"),
-      isActive: true,
-    },
-  });
-
-  console.log("Seed data created successfully:");
-  console.log("- Owner:", owner.username);
-  console.log("- Organization:", organization.name);
-  console.log("- User:", user.username);
-  console.log(
-    "- Material Rates:",
-    materialRate1.materialType,
-    materialRate2.materialType
-  );
-  console.log(
-    "- Truck Entries:",
-    truckEntry1.truckNumber,
-    truckEntry2.truckNumber
-  );
-  console.log("- Other Expenses:", expense1.expenseType, expense2.expenseType);
+    console.log("\n📊 Database Statistics:");
+    console.log(`Users: ${totalUsers}`);
+    console.log(`Organizations: ${totalOrganizations}`);
+    console.log(`Material Rates: ${totalRates}`);
+  } catch (error) {
+    console.error("❌ Production database seeding failed:", error);
+    process.exit(1);
+  }
 }
 
 main()
