@@ -2,13 +2,14 @@
 
 node_modules
 
-# Build outputs
+# Build outputs (but keep public directory)
 
 dist
 build
 
 # Development files
 
+.env
 .env.local
 .env.development.local
 .env.test.local
@@ -39,7 +40,6 @@ coverage
 
 \*.md
 !README.md
-!VERCEL_DEPLOYMENT.md
 
 # Docker files
 
@@ -65,6 +65,10 @@ _.sqlite3
 prisma/migrations
 prisma/seed.ts
 
-# Build configs (keep only what's needed)
+# Keep necessary files for Vercel build
 
-tsconfig.json
+# public/ (needed for static files)
+
+# api/ (needed for serverless functions)
+
+# tsconfig.json and tsconfig.build.json (needed for TypeScript compilation)

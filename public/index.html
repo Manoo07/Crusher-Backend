@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Crusher Backend API</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        max-width: 600px;
+        margin: 2rem auto;
+        padding: 1rem;
+        line-height: 1.6;
+        color: #333;
+        background: #fafafa;
+      }
+      .container {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .api-link {
+        display: inline-block;
+        padding: 0.75rem 1.5rem;
+        background: #0070f3;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+        margin: 0.5rem 0.5rem 0.5rem 0;
+        transition: background 0.2s;
+      }
+      .api-link:hover {
+        background: #0051d5;
+      }
+      .api-link.secondary {
+        background: #666;
+      }
+      .api-link.secondary:hover {
+        background: #444;
+      }
+      code {
+        background: #f5f5f5;
+        padding: 0.2rem 0.4rem;
+        border-radius: 3px;
+        font-family: "SF Mono", Monaco, monospace;
+      }
+      .endpoint {
+        margin: 0.5rem 0;
+      }
+      .status {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        background: #28a745;
+        color: white;
+        border-radius: 3px;
+        font-size: 0.85rem;
+        margin-bottom: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🚀 Crusher Backend API</h1>
+      <div class="status">✅ API Online</div>
+
+      <p>
+        Welcome to the Crusher Backend API. This is a RESTful API built with
+        Express.js, TypeScript, and Prisma ORM for managing crusher operations,
+        truck entries, and material rates.
+      </p>
+
+      <div style="margin: 1.5rem 0">
+        <a href="/api/health" class="api-link">Health Check</a>
+        <a href="/api" class="api-link secondary">API Root</a>
+      </div>
+
+      <h2>📋 Available Endpoints:</h2>
+      <div class="endpoint">
+        🏥 <strong>Health:</strong> <code>GET /api/health</code>
+      </div>
+      <div class="endpoint">
+        🏢 <strong>Organizations:</strong> <code>/api/organizations</code>
+      </div>
+      <div class="endpoint">
+        👤 <strong>Users:</strong> <code>/api/users</code>
+      </div>
+      <div class="endpoint">
+        🚛 <strong>Truck Entries:</strong> <code>/api/truck-entries</code>
+      </div>
+      <div class="endpoint">
+        💰 <strong>Material Rates:</strong> <code>/api/material-rates</code>
+      </div>
+      <div class="endpoint">
+        📊 <strong>Other Expenses:</strong> <code>/api/other-expenses</code>
+      </div>
+      <div class="endpoint">
+        📈 <strong>Dashboard:</strong> <code>/api/dashboard</code>
+      </div>
+
+      <h2>🔐 Authentication:</h2>
+      <p>
+        Most endpoints require JWT authentication. Include the token in the
+        Authorization header:
+      </p>
+      <code>Authorization: Bearer &lt;your-token&gt;</code>
+
+      <h2>🚀 Quick Start:</h2>
+      <ol>
+        <li>Test the API: <a href="/api/health">Health Check</a></li>
+        <li>Login with demo credentials (if seeded)</li>
+        <li>Use the API endpoints for your application</li>
+      </ol>
+
+      <footer
+        style="
+          margin-top: 2rem;
+          padding-top: 1rem;
+          border-top: 1px solid #eee;
+          text-align: center;
+          color: #666;
+        "
+      >
+        <p>Crusher Backend API v1.0.0 | Built with ❤️</p>
+        <p>
+          <small>Powered by Express.js, TypeScript, Prisma & PostgreSQL</small>
+        </p>
+      </footer>
+    </div>
+
+    <script>
+      // Auto-redirect to API health check after 10 seconds if no interaction
+      setTimeout(() => {
+        if (!document.hidden) {
+          console.log("Auto-testing API health...");
+          fetch("/api/health")
+            .then((r) => r.json())
+            .then((data) => console.log("API Status:", data))
+            .catch((e) => console.log("API Error:", e));
+        }
+      }, 2000);
+    </script>
+  </body>
+</html>

@@ -1,4 +1,4 @@
-import { Response } from "express";
+import { Request, Response } from "express";
 import { OrganizationService } from "../services/organizationService";
 import { AuthenticatedRequest, PaginationParams } from "../types";
 import { ResponseUtil } from "../utils/response";
@@ -35,27 +35,9 @@ export class OrganizationController {
     }
   };
 
-  getOrganizationById = async (req: AuthenticatedRequest, res: Response) => {
+  getOrganizationById = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-
-      if (!req.user) {
-        return ResponseUtil.unauthorized(res, "Authentication required");
-      }
-
-      // Check if user has access to this organization
-      const hasAccess =
-        await this.organizationService.validateOrganizationAccess(
-          req.user.id,
-          id
-        );
-
-      if (!hasAccess) {
-        return ResponseUtil.forbidden(
-          res,
-          "Access denied to this organization"
-        );
-      }
 
       const organization = await this.organizationService.getOrganizationById(
         id
@@ -111,18 +93,8 @@ export class OrganizationController {
     }
   };
 
-  getAllOrganizations = async (req: AuthenticatedRequest, res: Response) => {
+  getAllOrganizations = async (req: Request, res: Response) => {
     try {
-      if (!req.user) {
-        return ResponseUtil.unauthorized(res, "Authentication required");
-      }
-
-      // Only system admins should be able to see all organizations
-      // For now, we'll allow owners to see all organizations
-      if (req.user.role !== "owner") {
-        return ResponseUtil.forbidden(res, "Insufficient permissions");
-      }
-
       const paginationParams: PaginationParams = {
         page: req.query.page ? parseInt(req.query.page as string) : 1,
         limit: req.query.limit ? parseInt(req.query.limit as string) : 10,

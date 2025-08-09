@@ -7,41 +7,48 @@ import { ValidationMiddleware } from "../middlewares/validation";
 const router = Router();
 const organizationController = new OrganizationController();
 
-// Apply authentication middleware to all organization routes
-router.use(AuthMiddleware.authenticate);
-router.use(AuthMiddleware.requireActiveUser());
+// Public routes (no authentication required)
 
-// Create organization
-router.post(
+// Get all organizations (no authentication required)
+router.get(
   "/",
-  ValidationMiddleware.validateRequired(["name"]),
-  ErrorMiddleware.asyncHandler(organizationController.createOrganization)
+  ValidationMiddleware.validatePagination(),
+  ErrorMiddleware.asyncHandler(organizationController.getAllOrganizations)
 );
 
-// Get current user's organization
+// Protected routes with specific paths (must come before wildcard /:id)
+
+// Get current user's organization (requires authentication)
 router.get(
   "/me",
+  AuthMiddleware.authenticate,
+  AuthMiddleware.requireActiveUser(),
   ErrorMiddleware.asyncHandler(organizationController.getUserOrganization)
 );
 
-// Get organization by ID
+// Public route - Get organization by ID (no authentication required)
 router.get(
   "/:id",
   ValidationMiddleware.validateUUID("id"),
   ErrorMiddleware.asyncHandler(organizationController.getOrganizationById)
 );
 
-// Get all organizations (admin/owner only)
-router.get(
+// Other protected routes
+
+// Create organization
+router.post(
   "/",
-  ValidationMiddleware.validatePagination(),
-  AuthMiddleware.requireOwner(),
-  ErrorMiddleware.asyncHandler(organizationController.getAllOrganizations)
+  AuthMiddleware.authenticate,
+  AuthMiddleware.requireActiveUser(),
+  ValidationMiddleware.validateRequired(["name"]),
+  ErrorMiddleware.asyncHandler(organizationController.createOrganization)
 );
 
 // Update organization
 router.put(
   "/:id",
+  AuthMiddleware.authenticate,
+  AuthMiddleware.requireActiveUser(),
   ValidationMiddleware.validateUUID("id"),
   ValidationMiddleware.validateRequired(["name"]),
   AuthMiddleware.requireOwner(),
@@ -51,6 +58,8 @@ router.put(
 // Delete organization
 router.delete(
   "/:id",
+  AuthMiddleware.authenticate,
+  AuthMiddleware.requireActiveUser(),
   ValidationMiddleware.validateUUID("id"),
   AuthMiddleware.requireOwner(),
   ErrorMiddleware.asyncHandler(organizationController.deleteOrganization)
