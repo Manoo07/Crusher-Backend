@@ -169,6 +169,8 @@ export class OtherExpenseDAO {
           expensesName: true,
           amount: true,
           others: true,
+          createdAt: true,
+          updatedAt: true,
         },
         orderBy: { amount: "desc" },
       }),
@@ -181,6 +183,8 @@ export class OtherExpenseDAO {
         expensesName: item.expensesName,
         totalAmount: item.amount || 0,
         others: item.others || null,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
       })),
     };
   }
