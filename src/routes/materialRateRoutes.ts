@@ -17,6 +17,12 @@ router.get(
   ErrorMiddleware.asyncHandler(materialRateController.getMaterialRates)
 );
 
+// Get standard material types
+router.get(
+  "/types",
+  ErrorMiddleware.asyncHandler(materialRateController.getMaterialTypes)
+);
+
 // Create or update material rate (owner only)
 router.post(
   "/",

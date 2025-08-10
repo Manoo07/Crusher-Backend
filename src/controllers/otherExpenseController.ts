@@ -19,7 +19,7 @@ export class OtherExpenseController {
         limit = 10,
         sortBy = "createdAt",
         sortOrder = "desc",
-        expenseType,
+        expensesName,
         startDate,
         endDate,
         userId,
@@ -31,7 +31,7 @@ export class OtherExpenseController {
         limit: Number(limit),
         sortBy: sortBy as string,
         sortOrder: sortOrder as "asc" | "desc",
-        expenseType: expenseType as string,
+        expensesName: expensesName as string,
         startDate: startDate as string,
         endDate: endDate as string,
         userId: userId as string,
@@ -67,14 +67,28 @@ export class OtherExpenseController {
   createExpense = async (req: Request, res: Response): Promise<void> => {
     try {
       const user = (req as any).user;
-      const { expenseType, amount, description, date } = req.body;
+      const { expensesName, amount, others, notes } = req.body;
+
+      // Validate required fields
+      if (!expensesName || !amount) {
+        ResponseUtil.badRequest(res, "Expenses name and amount are required");
+        return;
+      }
+
+      // Validate amount is a positive number
+      const numericAmount = Number(amount);
+      if (isNaN(numericAmount) || numericAmount <= 0) {
+        ResponseUtil.badRequest(res, "Amount must be a positive number");
+        return;
+      }
 
       const expense = await this.otherExpenseService.createExpense(
         {
-          expenseType,
-          amount: Number(amount),
-          description,
-          date,
+          expensesName,
+          amount: numericAmount,
+          others,
+          notes,
+          // Date is automatically set to current date in the backend
         },
         user.id,
         user.organizationId
@@ -150,7 +164,7 @@ export class OtherExpenseController {
     try {
       const user = (req as any).user;
       const { id } = req.params;
-      const { expenseType, amount, description, date } = req.body;
+      const { expensesName, amount, others, notes } = req.body;
 
       // Check ownership
       const isOwner = await this.otherExpenseService.validateExpenseOwnership(
@@ -163,10 +177,10 @@ export class OtherExpenseController {
       }
 
       const expense = await this.otherExpenseService.updateExpense(id, {
-        expenseType,
+        expensesName,
         amount: amount ? Number(amount) : undefined,
-        description,
-        date,
+        others,
+        notes,
       });
 
       ResponseUtil.success(res, { expense }, "Expense updated successfully");

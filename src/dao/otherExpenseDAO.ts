@@ -31,7 +31,7 @@ export class OtherExpenseDAO {
       limit = 10,
       sortBy = "createdAt",
       sortOrder = "desc",
-      expenseType,
+      expensesName,
       startDate,
       endDate,
       userId,
@@ -41,8 +41,8 @@ export class OtherExpenseDAO {
     const skip = (page - 1) * limit;
     const where: Prisma.OtherExpenseWhereInput = {};
 
-    if (expenseType)
-      where.expenseType = { contains: expenseType, mode: "insensitive" };
+    if (expensesName)
+      where.expensesName = { contains: expensesName, mode: "insensitive" };
     if (userId) where.userId = userId;
     if (typeof isActive === "boolean") where.isActive = isActive;
 
@@ -78,7 +78,7 @@ export class OtherExpenseDAO {
       limit = 10,
       sortBy = "createdAt",
       sortOrder = "desc",
-      expenseType,
+      expensesName,
       startDate,
       endDate,
       userId,
@@ -88,8 +88,8 @@ export class OtherExpenseDAO {
     const skip = (page - 1) * limit;
     const where: Prisma.OtherExpenseWhereInput = { organizationId };
 
-    if (expenseType)
-      where.expenseType = { contains: expenseType, mode: "insensitive" };
+    if (expensesName)
+      where.expensesName = { contains: expensesName, mode: "insensitive" };
     if (userId) where.userId = userId;
     if (typeof isActive === "boolean") where.isActive = isActive;
 
@@ -164,7 +164,7 @@ export class OtherExpenseDAO {
         _sum: { amount: true },
       }),
       prisma.otherExpense.groupBy({
-        by: ["expenseType"],
+        by: ["expensesName"],
         where,
         _sum: { amount: true },
         _count: { id: true },
@@ -176,7 +176,7 @@ export class OtherExpenseDAO {
       totalExpenses,
       totalAmount: totalAmount._sum.amount || 0,
       expensesByType: expensesByType.map((item) => ({
-        expenseType: item.expenseType,
+        expenseType: item.expensesName,
         totalAmount: item._sum.amount || 0,
         count: item._count.id,
       })),
@@ -191,11 +191,11 @@ export class OtherExpenseDAO {
         organizationId,
         isActive: true,
       },
-      select: { expenseType: true },
-      distinct: ["expenseType"],
-      orderBy: { expenseType: "asc" },
+      select: { expensesName: true },
+      distinct: ["expensesName"],
+      orderBy: { expensesName: "asc" },
     });
 
-    return result.map((item) => item.expenseType);
+    return result.map((item) => item.expensesName);
   }
 }

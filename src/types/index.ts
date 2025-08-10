@@ -51,7 +51,7 @@ export interface MaterialRateFilters extends PaginationParams {
 }
 
 export interface ExpenseFilters extends PaginationParams {
-  expenseType?: string;
+  expensesName?: string;
   startDate?: string;
   endDate?: string;
   userId?: string;

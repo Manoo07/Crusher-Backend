@@ -1,4 +1,7 @@
 import { Router } from "express";
+import { MaterialRateController } from "../controllers/materialRateController";
+import { AuthMiddleware } from "../middlewares/auth";
+import { ErrorMiddleware } from "../middlewares/error";
 import { authRoutes } from "./authRoutes";
 import { configRoutes } from "./configRoutes";
 import { dashboardRoutes } from "./dashboardRoutes";
@@ -10,6 +13,7 @@ import { truckEntryRoutes } from "./truckEntryRoutes";
 import { userRoutes } from "./userRoutes";
 
 const router = Router();
+const materialRateController = new MaterialRateController();
 
 // Health check (no authentication required)
 router.get("/health", (req, res) => {
@@ -20,6 +24,14 @@ router.get("/health", (req, res) => {
     version: "1.0.0",
   });
 });
+
+// Material types endpoint (requires authentication)
+router.get(
+  "/material-types",
+  AuthMiddleware.authenticate,
+  AuthMiddleware.requireActiveUser(),
+  ErrorMiddleware.asyncHandler(materialRateController.getMaterialTypes)
+);
 
 // Mount route modules
 router.use("/auth", authRoutes);

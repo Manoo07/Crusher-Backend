@@ -35,7 +35,7 @@ router.get(
 // Create expense
 router.post(
   "/",
-  ValidationMiddleware.validateRequired(["expenseType", "amount", "date"]),
+  ValidationMiddleware.validateRequired(["expensesName", "amount"]),
   ErrorMiddleware.asyncHandler(otherExpenseController.createExpense)
 );
 

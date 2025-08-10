@@ -69,4 +69,29 @@ export class MaterialRateController {
       return ResponseUtil.badRequest(res, error.message);
     }
   };
+
+  // GET /api/material-types
+  getMaterialTypes = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const materialTypes = [
+        '1 1/2" Metal',
+        '3/4" jalli',
+        '1/2" jalli',
+        '1/4" kuranai',
+        "Dust",
+        "Wetmix",
+        "Msand",
+        "Psand",
+      ];
+
+      return ResponseUtil.success(
+        res,
+        { materialTypes },
+        "Material types retrieved successfully"
+      );
+    } catch (error: any) {
+      console.error("Get material types error:", error);
+      return ResponseUtil.error(res, error.message);
+    }
+  };
 }

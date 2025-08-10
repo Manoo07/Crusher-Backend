@@ -926,6 +926,58 @@ paths:
         "400": { $ref: "#/components/responses/ValidationError" }
         "401": { $ref: "#/components/responses/UnauthorizedError" }
         "403": { $ref: "#/components/responses/ForbiddenError" }
+  /api/material-types:
+    get:
+      tags: [Material Rates]
+      summary: Get standard material types
+      responses:
+        "200":
+          {
+            description: OK,
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      {
+                        allOf:
+                          [
+                            { $ref: "#/components/schemas/StandardSuccess" },
+                            {
+                              type: object,
+                              properties:
+                                {
+                                  data:
+                                    {
+                                      type: object,
+                                      properties:
+                                        {
+                                          materialTypes:
+                                            {
+                                              type: array,
+                                              items: { type: string },
+                                              example:
+                                                [
+                                                  '1 1/2" Metal',
+                                                  '3/4" jalli',
+                                                  '1/2" jalli',
+                                                  '1/4" kuranai',
+                                                  "Dust",
+                                                  "Wetmix",
+                                                  "Msand",
+                                                  "Psand",
+                                                ],
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                          ],
+                      },
+                  },
+              },
+          }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
   /api/config/app:
     get:
       tags: [Configuration]

@@ -11,19 +11,20 @@ export class OtherExpenseService {
 
   async createExpense(
     expenseData: {
-      expenseType: string;
+      expensesName: string;
       amount: number;
-      description?: string;
-      date: string;
+      others?: string;
+      notes?: string;
     },
     userId: string,
     organizationId: string
   ): Promise<OtherExpense> {
     const createData: Prisma.OtherExpenseCreateInput = {
-      expenseType: expenseData.expenseType,
+      expensesName: expenseData.expensesName,
       amount: expenseData.amount,
-      description: expenseData.description || null,
-      date: new Date(expenseData.date),
+      others: expenseData.others || null,
+      notes: expenseData.notes || null,
+      date: new Date(), // Automatically set to current date
       user: { connect: { id: userId } },
       organization: { connect: { id: organizationId } },
       isActive: true,
@@ -49,19 +50,19 @@ export class OtherExpenseService {
   async updateExpense(
     id: string,
     updateData: {
-      expenseType?: string;
+      expensesName?: string;
       amount?: number;
-      description?: string;
-      date?: string;
+      others?: string;
+      notes?: string;
     }
   ): Promise<OtherExpense> {
     const data: Prisma.OtherExpenseUpdateInput = {};
 
-    if (updateData.expenseType) data.expenseType = updateData.expenseType;
+    if (updateData.expensesName) data.expensesName = updateData.expensesName;
     if (updateData.amount !== undefined) data.amount = updateData.amount;
-    if (updateData.description !== undefined)
-      data.description = updateData.description;
-    if (updateData.date) data.date = new Date(updateData.date);
+    if (updateData.others !== undefined) data.others = updateData.others;
+    if (updateData.notes !== undefined) data.notes = updateData.notes;
+    // Note: We don't allow updating the date after creation
 
     return await this.otherExpenseDAO.update(id, data);
   }
