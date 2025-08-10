@@ -32,8 +32,8 @@ export class TruckEntryService {
       throw new Error("Missing required fields");
     }
 
-    // Calculate total amount
-    const totalAmount = data.units * data.ratePerUnit;
+    // Calculate total amount - ensure both values are numbers
+    const totalAmount = Number(data.units) * Number(data.ratePerUnit);
 
     const createData: Prisma.TruckEntryCreateInput = {
       organization: { connect: { id: data.organizationId } },
@@ -42,8 +42,8 @@ export class TruckEntryService {
       truckName: data.truckName,
       entryType: data.entryType as any,
       materialType: data.materialType,
-      units: data.units,
-      ratePerUnit: data.ratePerUnit,
+      units: Number(data.units),
+      ratePerUnit: Number(data.ratePerUnit),
       totalAmount,
       entryDate: data.entryDate,
       entryTime: data.entryTime,

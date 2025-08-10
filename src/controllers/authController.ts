@@ -18,8 +18,13 @@ export class AuthController {
 
   register = async (req: Request, res: Response) => {
     try {
-      const { username, password, organizationName, organizationId, role } =
-        req.body;
+      const {
+        username,
+        password,
+        organizationName,
+        organizationId: reqOrganizationId,
+        role,
+      } = req.body;
 
       // Validate input
       const usernameValidation = ValidationUtil.validateUsername(username);
@@ -67,16 +72,14 @@ export class AuthController {
           organizationId: organization.id,
         });
       } else {
-        // Regular user creation or owner without new organization
-        // If organizationId is provided, use it; otherwise leave as undefined
-        finalOrganizationId = organizationId;
-
+        // Regular user creation or adding user to existing organization
         user = await this.userService.createUser({
           username,
           passwordHash,
           role: role || "user",
-          organizationId: finalOrganizationId,
+          organizationId: reqOrganizationId,
         });
+        finalOrganizationId = reqOrganizationId;
       }
 
       const userResponse = await this.userService.getUserByUsername(username);

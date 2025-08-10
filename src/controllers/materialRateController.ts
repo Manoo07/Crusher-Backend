@@ -40,15 +40,21 @@ export class MaterialRateController {
         return ResponseUtil.unauthorized(res, "Authentication required");
       }
 
-      if (rate <= 0) {
-        return ResponseUtil.badRequest(res, "Rate must be greater than 0");
+      // Convert rate to number to avoid string concatenation
+      const numericRate = Number(rate);
+
+      if (isNaN(numericRate) || numericRate <= 0) {
+        return ResponseUtil.badRequest(
+          res,
+          "Rate must be a valid number greater than 0"
+        );
       }
 
       const materialRate =
         await this.materialRateService.createOrUpdateMaterialRate({
           organizationId: req.organizationId,
           materialType,
-          ratePerUnit: rate,
+          ratePerUnit: numericRate,
           updatedBy: req.user.id,
         });
 
