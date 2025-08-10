@@ -157,28 +157,30 @@ export class OtherExpenseDAO {
       if (endDate) where.date.lte = endDate;
     }
 
-    const [totalExpenses, totalAmount, expensesByType] = await Promise.all([
+    const [totalExpenses, totalAmount, expenses] = await Promise.all([
       prisma.otherExpense.count({ where }),
       prisma.otherExpense.aggregate({
         where,
         _sum: { amount: true },
       }),
-      prisma.otherExpense.groupBy({
-        by: ["expensesName"],
+      prisma.otherExpense.findMany({
         where,
-        _sum: { amount: true },
-        _count: { id: true },
-        orderBy: { _sum: { amount: "desc" } },
+        select: {
+          expensesName: true,
+          amount: true,
+          others: true,
+        },
+        orderBy: { amount: "desc" },
       }),
     ]);
 
     return {
       totalExpenses,
       totalAmount: totalAmount._sum.amount || 0,
-      expensesByType: expensesByType.map((item) => ({
-        expenseType: item.expensesName,
-        totalAmount: item._sum.amount || 0,
-        count: item._count.id,
+      expenses: expenses.map((item) => ({
+        expensesName: item.expensesName,
+        totalAmount: item.amount || 0,
+        others: item.others || null,
       })),
     };
   }

@@ -105,7 +105,7 @@ export class OtherExpenseController {
     }
   };
 
-  // GET /api/expenses/summary
+  // GET /api/expenses
   getExpenseSummary = async (req: Request, res: Response): Promise<void> => {
     try {
       const user = (req as any).user;
@@ -122,7 +122,7 @@ export class OtherExpenseController {
         {
           totalAmount: summary.totalAmount,
           totalCount: summary.totalExpenses,
-          expensesByType: summary.expensesByType,
+          expenses: summary.expenses,
         },
         "Expense summary retrieved successfully"
       );

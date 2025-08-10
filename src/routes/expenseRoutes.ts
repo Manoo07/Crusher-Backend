@@ -11,17 +11,9 @@ const otherExpenseController = new OtherExpenseController();
 router.use(AuthMiddleware.authenticate);
 router.use(AuthMiddleware.requireActiveUser());
 
-// Get expenses with filtering and pagination
-router.get(
-  "/",
-  ValidationMiddleware.validatePagination(),
-  ValidationMiddleware.validateDateRange(),
-  ErrorMiddleware.asyncHandler(otherExpenseController.getExpenses)
-);
-
 // Get expense summary
 router.get(
-  "/summary",
+  "/",
   ValidationMiddleware.validateDateRange(),
   ErrorMiddleware.asyncHandler(otherExpenseController.getExpenseSummary)
 );
