@@ -125,6 +125,7 @@ export class UserService {
       role?: "owner" | "user";
       isActive?: boolean;
       profileImage?: string;
+      organizationId?: string;
     }
   ): Promise<User> {
     if (!id) {
@@ -167,6 +168,24 @@ export class UserService {
 
     if (data.profileImage !== undefined) {
       updateData.profileImage = data.profileImage;
+    }
+
+    if (data.organizationId !== undefined) {
+      if (data.organizationId) {
+        // If organizationId is provided, verify it exists
+        const organization = await this.organizationDAO.findById(data.organizationId);
+        if (!organization) {
+          throw new Error("Organization not found");
+        }
+        updateData.organization = {
+          connect: { id: data.organizationId },
+        };
+      } else {
+        // If organizationId is null, disconnect from organization
+        updateData.organization = {
+          disconnect: true,
+        };
+      }
     }
 
     return await this.userDAO.update(id, updateData);

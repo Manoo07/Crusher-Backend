@@ -18,7 +18,7 @@ export class AuthController {
 
   register = async (req: Request, res: Response) => {
     try {
-      const { username, password, organizationName, role } = req.body;
+      const { username, password, organizationName, organizationId, role } = req.body;
 
       // Validate input
       const usernameValidation = ValidationUtil.validateUsername(username);
@@ -41,29 +41,40 @@ export class AuthController {
       const saltRounds = 10;
       const passwordHash = await bcrypt.hash(password, saltRounds);
 
-      let organizationId: string | undefined;
+      let finalOrganizationId: string | undefined;
+      let user: any;
 
-      // If role is owner and organizationName is provided, create organization
+      // If role is owner and organizationName is provided, create new organization
       if (role === "owner" && organizationName) {
-        const user = await this.userService.createUser({
+        // First create the user without organization
+        user = await this.userService.createUser({
           username,
           passwordHash,
           role: "owner",
         });
 
+        // Then create the organization with the user as owner
         const organization = await this.organizationService.createOrganization({
           name: organizationName,
           ownerId: user.id,
         });
 
-        organizationId = organization.id;
+        finalOrganizationId = organization.id;
+
+        // Update the user with the organization ID
+        user = await this.userService.updateUser(user.id, {
+          organizationId: organization.id,
+        });
       } else {
-        // Regular user creation
-        const user = await this.userService.createUser({
+        // Regular user creation or owner without new organization
+        // If organizationId is provided, use it; otherwise leave as undefined
+        finalOrganizationId = organizationId;
+        
+        user = await this.userService.createUser({
           username,
           passwordHash,
           role: role || "user",
-          organizationId,
+          organizationId: finalOrganizationId,
         });
       }
 
@@ -79,8 +90,8 @@ export class AuthController {
         res,
         {
           user: userWithoutPassword,
-          organization: organizationId
-            ? await this.organizationService.getOrganizationById(organizationId)
+          organization: finalOrganizationId
+            ? await this.organizationService.getOrganizationById(finalOrganizationId)
             : null,
         },
         "User registered successfully",
