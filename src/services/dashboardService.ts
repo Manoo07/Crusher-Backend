@@ -9,6 +9,27 @@ export interface DashboardStats {
   recentEntries: any[];
 }
 
+export interface ComprehensiveDashboardSummary {
+  totalEntries: number;
+  totalSales: {
+    count: number;
+    totalAmount: number;
+    entries: any[];
+  };
+  rawStone: {
+    count: number;
+    totalAmount: number;
+    entries: any[];
+  };
+  expenses: {
+    count: number;
+    totalAmount: number;
+    entries: any[];
+  };
+  netWorth: number;
+  recentEntries: any[];
+}
+
 export interface RevenueByMaterial {
   materialType: string;
   revenue: number;
@@ -20,6 +41,18 @@ export class DashboardService {
 
   constructor() {
     this.dashboardDAO = new DashboardDAO();
+  }
+
+  async getComprehensiveDashboardSummary(
+    organizationId: string,
+    startDate?: Date,
+    endDate?: Date
+  ): Promise<ComprehensiveDashboardSummary> {
+    return await this.dashboardDAO.getComprehensiveDashboardSummary(
+      organizationId,
+      startDate,
+      endDate
+    );
   }
 
   async getDashboardStats(

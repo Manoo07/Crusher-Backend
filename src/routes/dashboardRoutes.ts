@@ -2,6 +2,7 @@ import { Router } from "express";
 import { DashboardController } from "../controllers/dashboardController";
 import { AuthMiddleware } from "../middlewares/auth";
 import { ErrorMiddleware } from "../middlewares/error";
+import { TimezoneMiddleware } from "../middlewares/timezone";
 import { ValidationMiddleware } from "../middlewares/validation";
 
 const router = Router();
@@ -10,6 +11,25 @@ const dashboardController = new DashboardController();
 // Apply authentication middleware
 router.use(AuthMiddleware.authenticate);
 router.use(AuthMiddleware.requireActiveUser());
+
+// Apply timezone validation and headers
+router.use(TimezoneMiddleware.validateTimezone());
+router.use(TimezoneMiddleware.addTimezoneHeaders());
+
+// Get available date filters
+router.get(
+  "/filters",
+  ErrorMiddleware.asyncHandler(dashboardController.getAvailableDateFilters)
+);
+
+// Get comprehensive dashboard summary with date filtering
+router.get(
+  "/",
+  ValidationMiddleware.validateDateRange(),
+  ErrorMiddleware.asyncHandler(
+    dashboardController.getComprehensiveDashboardSummary
+  )
+);
 
 // Get dashboard summary
 router.get(

@@ -1,7 +1,9 @@
 import { Response } from "express";
 import { DashboardService } from "../services/dashboardService";
 import { AuthenticatedRequest } from "../types";
+import { DateFilterType, DateFilterUtil } from "../utils/dateFilters";
 import { ResponseUtil } from "../utils/response";
+import { TimezoneAwareDateFilter } from "../utils/timezoneAwareDateFilter";
 
 export class DashboardController {
   private dashboardService: DashboardService;
@@ -10,18 +12,148 @@ export class DashboardController {
     this.dashboardService = new DashboardService();
   }
 
+  getComprehensiveDashboardSummary = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ) => {
+    try {
+      if (!req.user || !req.organizationId) {
+        return ResponseUtil.unauthorized(res, "Authentication required");
+      }
+
+      // Handle different date filter types with timezone awareness
+      const filterType = (req.query.filterType as string) || "this_week";
+      const customStart = req.query.startDate as string;
+      const customEnd = req.query.endDate as string;
+      const clientTimezone =
+        (req.query.timezone as string) ||
+        (req.headers["x-timezone"] as string) ||
+        "UTC";
+
+      let startDate: Date | undefined;
+      let endDate: Date | undefined;
+      let dateRangeDescription = "";
+
+      try {
+        // Validate filter type first
+        const validatedFilterType = DateFilterUtil.validateDateFilter(
+          filterType,
+          customStart,
+          customEnd
+        );
+
+        // Validate custom dates if provided
+        if (filterType === "custom") {
+          TimezoneAwareDateFilter.validateDateString(customStart, "startDate");
+          TimezoneAwareDateFilter.validateDateString(customEnd, "endDate");
+        }
+
+        // Get timezone-aware date range (this returns UTC dates for database queries)
+        const dateRange = TimezoneAwareDateFilter.getDateRange(
+          validatedFilterType,
+          customStart,
+          customEnd,
+          clientTimezone
+        );
+
+        startDate = dateRange.startDate;
+        endDate = dateRange.endDate;
+
+        // Format date range for client display
+        dateRangeDescription = TimezoneAwareDateFilter.formatDateRangeForClient(
+          validatedFilterType,
+          dateRange,
+          clientTimezone
+        );
+      } catch (error: any) {
+        return ResponseUtil.error(res, `Invalid date filter: ${error.message}`);
+      }
+
+      const summary =
+        await this.dashboardService.getComprehensiveDashboardSummary(
+          req.organizationId,
+          startDate,
+          endDate
+        );
+
+      // Add filter information to response with timezone details
+      const responseData = {
+        ...summary,
+        filterInfo: {
+          filterType,
+          dateRange: dateRangeDescription,
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+          timezone: clientTimezone,
+          clientStartDate: TimezoneAwareDateFilter.formatDateForClient(
+            startDate,
+            clientTimezone
+          ),
+          clientEndDate: TimezoneAwareDateFilter.formatDateForClient(
+            endDate,
+            clientTimezone
+          ),
+          utcOffset: new Date()
+            .toLocaleString("en-US", {
+              timeZone: clientTimezone,
+              timeZoneName: "short",
+            })
+            .split(" ")
+            .pop(),
+        },
+      };
+
+      return ResponseUtil.success(
+        res,
+        responseData,
+        "Comprehensive dashboard summary retrieved successfully"
+      );
+    } catch (error: any) {
+      console.error("Error getting comprehensive dashboard summary:", error);
+      return ResponseUtil.error(
+        res,
+        "Failed to retrieve comprehensive dashboard summary"
+      );
+    }
+  };
+
   getDashboardSummary = async (req: AuthenticatedRequest, res: Response) => {
     try {
       if (!req.user || !req.organizationId) {
         return ResponseUtil.unauthorized(res, "Authentication required");
       }
 
-      const startDate = req.query.startDate
-        ? new Date(req.query.startDate as string)
-        : undefined;
-      const endDate = req.query.endDate
-        ? new Date(req.query.endDate as string)
-        : undefined;
+      // Handle different date filter types
+      const filterType = (req.query.filterType as string) || "this_month";
+      const customStart = req.query.startDate as string;
+      const customEnd = req.query.endDate as string;
+
+      let startDate: Date | undefined;
+      let endDate: Date | undefined;
+      let dateRangeDescription = "";
+
+      try {
+        // Validate and get date range
+        const validatedFilterType = DateFilterUtil.validateDateFilter(
+          filterType,
+          customStart,
+          customEnd
+        );
+        const dateRange = DateFilterUtil.getDateRange(
+          validatedFilterType,
+          customStart,
+          customEnd
+        );
+
+        startDate = dateRange.startDate;
+        endDate = dateRange.endDate;
+        dateRangeDescription = DateFilterUtil.formatDateRange(
+          validatedFilterType,
+          dateRange
+        );
+      } catch (error: any) {
+        return ResponseUtil.error(res, `Invalid date filter: ${error.message}`);
+      }
 
       const summary = await this.dashboardService.getDashboardStats(
         req.organizationId,
@@ -29,9 +161,20 @@ export class DashboardController {
         endDate
       );
 
+      // Add filter information to response
+      const responseData = {
+        ...summary,
+        filterInfo: {
+          filterType,
+          dateRange: dateRangeDescription,
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+        },
+      };
+
       return ResponseUtil.success(
         res,
-        summary,
+        responseData,
         "Dashboard summary retrieved successfully"
       );
     } catch (error: any) {
@@ -46,12 +189,37 @@ export class DashboardController {
         return ResponseUtil.unauthorized(res, "Authentication required");
       }
 
-      const startDate = req.query.startDate
-        ? new Date(req.query.startDate as string)
-        : undefined;
-      const endDate = req.query.endDate
-        ? new Date(req.query.endDate as string)
-        : undefined;
+      // Handle different date filter types
+      const filterType = (req.query.filterType as string) || "this_month";
+      const customStart = req.query.startDate as string;
+      const customEnd = req.query.endDate as string;
+
+      let startDate: Date | undefined;
+      let endDate: Date | undefined;
+      let dateRangeDescription = "";
+
+      try {
+        // Validate and get date range
+        const validatedFilterType = DateFilterUtil.validateDateFilter(
+          filterType,
+          customStart,
+          customEnd
+        );
+        const dateRange = DateFilterUtil.getDateRange(
+          validatedFilterType,
+          customStart,
+          customEnd
+        );
+
+        startDate = dateRange.startDate;
+        endDate = dateRange.endDate;
+        dateRangeDescription = DateFilterUtil.formatDateRange(
+          validatedFilterType,
+          dateRange
+        );
+      } catch (error: any) {
+        return ResponseUtil.error(res, `Invalid date filter: ${error.message}`);
+      }
 
       const metrics = await this.dashboardService.getRevenueByMaterial(
         req.organizationId,
@@ -59,9 +227,20 @@ export class DashboardController {
         endDate
       );
 
+      // Add filter information to response
+      const responseData = {
+        metrics,
+        filterInfo: {
+          filterType,
+          dateRange: dateRangeDescription,
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+        },
+      };
+
       return ResponseUtil.success(
         res,
-        metrics,
+        responseData,
         "Financial metrics retrieved successfully"
       );
     } catch (error: any) {
@@ -93,6 +272,105 @@ export class DashboardController {
     } catch (error: any) {
       console.error("Get dashboard stats error:", error);
       return ResponseUtil.error(res, error.message);
+    }
+  };
+
+  getAvailableDateFilters = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ) => {
+    try {
+      const availableFilters = [
+        {
+          type: "today",
+          label: "Today",
+          description: "Today's data only",
+        },
+        {
+          type: "yesterday",
+          label: "Yesterday",
+          description: "Yesterday's data only",
+        },
+        {
+          type: "this_week",
+          label: "This Week",
+          description: "Current week (Sunday to Saturday)",
+        },
+        {
+          type: "last_week",
+          label: "Last Week",
+          description: "Previous week (Sunday to Saturday)",
+        },
+        {
+          type: "this_month",
+          label: "This Month",
+          description: "Current month (1st to last day)",
+        },
+        {
+          type: "last_month",
+          label: "Last Month",
+          description: "Previous month",
+        },
+        {
+          type: "this_year",
+          label: "This Year",
+          description: "Current year (Jan 1 to Dec 31)",
+        },
+        {
+          type: "last_7_days",
+          label: "Last 7 Days",
+          description: "Last 7 days including today",
+        },
+        {
+          type: "last_30_days",
+          label: "Last 30 Days",
+          description: "Last 30 days including today",
+        },
+        {
+          type: "custom",
+          label: "Custom Range",
+          description: "Custom date range with startDate and endDate",
+        },
+      ];
+
+      // Calculate sample date ranges for each filter
+      const filtersWithRanges = availableFilters.map((filter) => {
+        try {
+          if (filter.type !== "custom") {
+            const dateRange = DateFilterUtil.getDateRange(
+              filter.type as DateFilterType
+            );
+            return {
+              ...filter,
+              sampleDateRange: DateFilterUtil.formatDateRange(
+                filter.type as DateFilterType,
+                dateRange
+              ),
+            };
+          }
+          return {
+            ...filter,
+            sampleDateRange: "Requires startDate and endDate parameters",
+          };
+        } catch (error) {
+          return {
+            ...filter,
+            sampleDateRange: "Error calculating range",
+          };
+        }
+      });
+
+      return ResponseUtil.success(
+        res,
+        { filters: filtersWithRanges },
+        "Available date filters retrieved successfully"
+      );
+    } catch (error: any) {
+      console.error("Error getting available date filters:", error);
+      return ResponseUtil.error(
+        res,
+        "Failed to retrieve available date filters"
+      );
     }
   };
 }
