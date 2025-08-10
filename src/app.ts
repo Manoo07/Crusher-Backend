@@ -1,6 +1,7 @@
 import cors from "cors";
 import dotenv from "dotenv";
 import express, { NextFunction, Request, Response } from "express";
+import path from "path";
 import { ErrorMiddleware } from "./middlewares/error";
 import { apiRoutes } from "./routes";
 import DatabaseConnection from "./utils/database";
@@ -11,13 +12,52 @@ dotenv.config();
 // Initialize Express app
 const app = express();
 
-// Middleware
-app.use(
-  cors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:3000",
-    credentials: true,
-  })
-);
+// Middleware - CORS configuration
+const corsOptions = {
+  origin: function (
+    origin: string | undefined,
+    callback: (error: Error | null, allow?: boolean) => void
+  ) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    // In development, allow all origins
+    if (process.env.NODE_ENV === "development") {
+      return callback(null, true);
+    }
+
+    // In production, check against allowed origins
+    const allowedOrigins = process.env.CORS_ORIGIN?.split(",") || [
+      "http://localhost:3000",
+    ];
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error("Not allowed by CORS"), false);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  allowedHeaders: [
+    "Origin",
+    "X-Requested-With",
+    "Content-Type",
+    "Accept",
+    "Authorization",
+    "Cache-Control",
+    "Pragma",
+    "Expires",
+    "X-API-Key",
+    "Access-Control-Allow-Headers",
+    "Access-Control-Request-Method",
+    "Access-Control-Request-Headers",
+  ],
+  exposedHeaders: ["X-Total-Count", "X-Page-Count"],
+  optionsSuccessStatus: 200, // Some legacy browsers choke on 204
+  preflightContinue: false,
+};
+
+app.use(cors(corsOptions));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -31,6 +71,39 @@ if (process.env.NODE_ENV === "development") {
 
 // API Routes
 app.use("/api", apiRoutes);
+
+// Serve Swagger YAML file
+app.get("/swagger.yaml", (req: Request, res: Response) => {
+  res.setHeader("Content-Type", "application/x-yaml");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.sendFile(path.join(__dirname, "../swagger.yaml"));
+});
+
+// Swagger UI redirect endpoint
+app.get("/docs", (req: Request, res: Response) => {
+  res.redirect(
+    "https://petstore.swagger.io/?url=" +
+      encodeURIComponent(
+        req.protocol + "://" + req.get("host") + "/swagger.yaml"
+      )
+  );
+});
+
+// API documentation endpoint
+app.get("/api-docs", (req: Request, res: Response) => {
+  const baseUrl = req.protocol + "://" + req.get("host");
+  res.json({
+    success: true,
+    message: "API Documentation",
+    swagger_yaml: `${baseUrl}/swagger.yaml`,
+    swagger_ui: `${baseUrl}/docs`,
+    postman_collection: `${baseUrl}/api/health`,
+    version: "1.0.0",
+    timestamp: new Date().toISOString(),
+  });
+});
 
 // Root endpoint
 app.get("/", (req: Request, res: Response) => {

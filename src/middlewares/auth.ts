@@ -1,60 +1,55 @@
 import { NextFunction, Response } from "express";
+import jwt from "jsonwebtoken";
+import { UserService } from "../services/userService";
 import { AuthenticatedRequest } from "../types";
 import { ResponseUtil } from "../utils/response";
 
 export class AuthMiddleware {
-  // Placeholder for authentication middleware
-  // In a real application, you would implement JWT token validation here
+  private static userService = new UserService();
+
+  // Authentication middleware with proper JWT verification
   static async authenticate(
     req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
   ) {
     try {
-      // For now, this is a placeholder implementation
-      // In production, you would:
-      // 1. Extract JWT token from Authorization header
-      // 2. Verify and decode the token
-      // 3. Fetch user information
-      // 4. Attach user to request object
-
       const authHeader = req.headers.authorization;
 
       if (!authHeader || !authHeader.startsWith("Bearer ")) {
         return ResponseUtil.unauthorized(res, "Authentication token required");
       }
 
-      // TODO: Implement JWT token verification
-      // const token = authHeader.substring(7);
-      // const decoded = jwt.verify(token, process.env.JWT_SECRET!);
-      // const user = await userService.getUserById(decoded.userId);
+      const token = authHeader.substring(7);
 
-      // For development purposes, you can bypass authentication
-      // by setting a test user or implementing a simple mechanism
+      try {
+        // Verify JWT token
+        const decoded = jwt.verify(
+          token,
+          process.env.JWT_SECRET || "your-secret-key-here"
+        ) as any;
 
-      // Placeholder: In development, you might want to mock a user
-      if (
-        process.env.NODE_ENV === "development" &&
-        process.env.SKIP_AUTH === "true"
-      ) {
-        // Mock user for development
-        req.user = {
-          id: "dev-user-id",
-          username: "devuser",
-          role: "owner" as any,
-          organizationId: "dev-org-id",
-          isActive: true,
-          passwordHash: "",
-          lastLogin: null,
-          profileImage: null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-        req.organizationId = "dev-org-id";
+        // Get fresh user data from database
+        const user = await AuthMiddleware.userService.getUserById(
+          decoded.userId
+        );
+
+        if (!user) {
+          return ResponseUtil.unauthorized(res, "Invalid authentication token");
+        }
+
+        if (!user.isActive) {
+          return ResponseUtil.forbidden(res, "Account is deactivated");
+        }
+
+        // Attach user to request object
+        req.user = user;
+        req.organizationId = decoded.organizationId || user.organizationId;
+
         return next();
+      } catch (jwtError) {
+        return ResponseUtil.unauthorized(res, "Invalid authentication token");
       }
-
-      return ResponseUtil.unauthorized(res, "Invalid authentication token");
     } catch (error) {
       console.error("Authentication error:", error);
       return ResponseUtil.unauthorized(res, "Authentication failed");

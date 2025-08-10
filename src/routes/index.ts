@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { authRoutes } from "./authRoutes";
 import { organizationRoutes } from "./organizationRoutes";
 import { userRoutes } from "./userRoutes";
 
@@ -15,6 +16,7 @@ router.get("/health", (req, res) => {
 });
 
 // Mount route modules
+router.use("/auth", authRoutes);
 router.use("/organizations", organizationRoutes);
 router.use("/users", userRoutes);
 
@@ -37,13 +39,6 @@ router.use("/expenses", (req, res) => {
   res.status(501).json({
     success: false,
     message: "Other expenses API not yet implemented",
-  });
-});
-
-router.use("/auth", (req, res) => {
-  res.status(501).json({
-    success: false,
-    message: "Authentication API not yet implemented",
   });
 });
 

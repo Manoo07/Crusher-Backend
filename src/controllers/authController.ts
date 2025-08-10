@@ -1,4 +1,6 @@
-import { Response } from "express";
+import bcrypt from "bcrypt";
+import { Request, Response } from "express";
+import jwt from "jsonwebtoken";
 import { OrganizationService } from "../services/organizationService";
 import { UserService } from "../services/userService";
 import { AuthenticatedRequest } from "../types";
@@ -14,7 +16,7 @@ export class AuthController {
     this.organizationService = new OrganizationService();
   }
 
-  register = async (req: AuthenticatedRequest, res: Response) => {
+  register = async (req: Request, res: Response) => {
     try {
       const { username, password, organizationName, role } = req.body;
 
@@ -29,8 +31,15 @@ export class AuthController {
         return ResponseUtil.badRequest(res, passwordValidation.message);
       }
 
-      // TODO: Hash password (implement proper password hashing)
-      const passwordHash = password; // In production, use bcrypt.hash(password, 10)
+      // Check if username already exists
+      const existingUser = await this.userService.getUserByUsername(username);
+      if (existingUser) {
+        return ResponseUtil.badRequest(res, "Username already exists");
+      }
+
+      // Hash password using bcrypt
+      const saltRounds = 10;
+      const passwordHash = await bcrypt.hash(password, saltRounds);
 
       let organizationId: string | undefined;
 
@@ -58,10 +67,6 @@ export class AuthController {
         });
       }
 
-      // Generate JWT token (placeholder - implement proper JWT)
-      const token = "placeholder-jwt-token";
-      const refreshToken = "placeholder-refresh-token";
-
       const userResponse = await this.userService.getUserByUsername(username);
       if (!userResponse) {
         return ResponseUtil.error(res, "User creation failed");
@@ -73,8 +78,6 @@ export class AuthController {
       return ResponseUtil.success(
         res,
         {
-          token,
-          refreshToken,
           user: userWithoutPassword,
           organization: organizationId
             ? await this.organizationService.getOrganizationById(organizationId)
@@ -89,7 +92,7 @@ export class AuthController {
     }
   };
 
-  login = async (req: AuthenticatedRequest, res: Response) => {
+  login = async (req: Request, res: Response) => {
     try {
       const { username, password } = req.body;
 
@@ -102,23 +105,35 @@ export class AuthController {
         return ResponseUtil.forbidden(res, "Account is deactivated");
       }
 
-      // TODO: Implement proper password verification
-      // const isValidPassword = await bcrypt.compare(password, user.passwordHash);
-      // if (!isValidPassword) {
-      //   return ResponseUtil.unauthorized(res, 'Invalid credentials');
-      // }
-
-      // For now, simple password comparison (replace with bcrypt in production)
-      if (password !== user.passwordHash) {
+      // Verify password using bcrypt
+      const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+      if (!isValidPassword) {
         return ResponseUtil.unauthorized(res, "Invalid credentials");
       }
 
       // Update last login
       await this.userService.updateLastLogin(user.id);
 
-      // Generate JWT tokens (placeholder - implement proper JWT)
-      const token = "placeholder-jwt-token";
-      const refreshToken = "placeholder-refresh-token";
+      // Get user's organization
+      const organization = user.organizationId
+        ? await this.organizationService.getOrganizationById(
+            user.organizationId
+          )
+        : user.role === "owner"
+        ? await this.organizationService.getOrganizationByOwnerId(user.id)
+        : null;
+
+      // Generate JWT token
+      const token = jwt.sign(
+        {
+          userId: user.id,
+          username: user.username,
+          role: user.role,
+          organizationId: user.organizationId || organization?.id,
+        },
+        process.env.JWT_SECRET || "your-secret-key-here",
+        { expiresIn: "24h" }
+      );
 
       // Remove password from response
       const { passwordHash: _, ...userWithoutPassword } = user;
@@ -127,8 +142,12 @@ export class AuthController {
         res,
         {
           token,
-          refreshToken,
-          user: userWithoutPassword,
+          user: {
+            ...userWithoutPassword,
+            organizationId: user.organizationId || organization?.id,
+            organization,
+          },
+          expiresIn: "24h",
         },
         "Login successful"
       );
@@ -162,11 +181,7 @@ export class AuthController {
 
   logout = async (req: AuthenticatedRequest, res: Response) => {
     try {
-      // In a real application, you would:
-      // 1. Invalidate the JWT token (add to blacklist)
-      // 2. Clear refresh tokens from database
-      // 3. Clear any session data
-
+      // In a stateless JWT system, logout is handled client-side by removing the token
       return ResponseUtil.success(res, null, "Logout successful");
     } catch (error: any) {
       console.error("Logout error:", error);
@@ -185,12 +200,25 @@ export class AuthController {
         return ResponseUtil.notFound(res, "User not found");
       }
 
+      // Get user's organization
+      const organization = user.organizationId
+        ? await this.organizationService.getOrganizationById(
+            user.organizationId
+          )
+        : user.role === "owner"
+        ? await this.organizationService.getOrganizationByOwnerId(user.id)
+        : null;
+
       // Remove password from response
       const { passwordHash: _, ...userWithoutPassword } = user;
 
       return ResponseUtil.success(
         res,
-        userWithoutPassword,
+        {
+          ...userWithoutPassword,
+          organizationId: user.organizationId || organization?.id,
+          organization,
+        },
         "Profile retrieved successfully"
       );
     } catch (error: any) {

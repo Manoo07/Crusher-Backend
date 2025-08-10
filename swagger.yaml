@@ -2,1006 +2,767 @@ openapi: 3.0.3
 info:
   title: CrusherMate API
   description: |
-    **CrusherMate Backend API** - Complete truck entry management system for crusher material business.
+    CrusherMate Backend API - Comprehensive documentation for all available endpoints.
 
-    ## Features
-    - User authentication and authorization
-    - Truck entry management (Sales & Raw Stone)
-    - Material rate management
-    - Dashboard analytics
-    - Financial reporting
-    - Real-time data export
-    - Organization management
-
-    ## Authentication
-    All protected endpoints require a valid JWT token in the Authorization header:
-    ```
-    Authorization: Bearer <your-jwt-token>
-    ```
-
-    ## Response Format
-    All API responses follow a consistent format:
-    ```json
-    {
-      "success": true,
-      "message": "Response message",
-      "data": { /* response data */ },
-      "timestamp": "2024-01-01T00:00:00.000Z"
-    }
-    ```
-
-    ## Error Handling
-    Error responses include appropriate HTTP status codes and error details:
-    ```json
-    {
-      "success": false,
-      "message": "Error message",
-      "error": "Detailed error information",
-      "timestamp": "2024-01-01T00:00:00.000Z"
-    }
-    ```
-
-  version: "1.0.0"
+    Authentication: Use a Bearer JWT in the Authorization header.
+    Example: `Authorization: Bearer <token>`
+  version: 1.0.0
   contact:
     name: CrusherMate Support
     email: support@crushermate.com
-  license:
-    name: MIT
-    url: https://opensource.org/licenses/MIT
-
 servers:
-  - url: https://your-api-domain.vercel.app
-    description: Production server
   - url: http://localhost:3000
-    description: Development server
-
+    description: Local Development
+  - url: https://localhost:3000
+    description: Local Development (HTTPS)
+  - url: http://127.0.0.1:3000
+    description: Local Development (IP)
+  - url: https://your-production-domain
+    description: Production
 security:
   - bearerAuth: []
-
-tags:
-  - name: Health
-    description: Health check endpoints
-  - name: Authentication
-    description: User authentication and authorization
-  - name: Users
-    description: User management
-  - name: Organizations
-    description: Organization management
-  - name: Truck Entries
-    description: Truck entry management (Sales & Raw Stone)
-  - name: Material Rates
-    description: Material rate management
-  - name: Dashboard
-    description: Dashboard analytics and statistics
-  - name: Reports
-    description: Report generation and data export
-  - name: Configuration
-    description: Application configuration and validation
-  - name: Other Expenses
-    description: Other expense management
-
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-
   schemas:
-    # Common Schemas
-    ApiResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          description: Indicates if the request was successful
-        message:
-          type: string
-          description: Human-readable response message
-        data:
-          type: object
-          description: Response data (varies by endpoint)
-        error:
-          type: string
-          description: Error details (present in error responses)
-        timestamp:
-          type: string
-          format: date-time
-          description: Response timestamp
-      required:
-        - success
-        - message
-        - timestamp
-
-    PaginationMeta:
-      type: object
-      properties:
-        totalDocs:
-          type: integer
-          description: Total number of documents
-        limit:
-          type: integer
-          description: Number of documents per page
-        totalPages:
-          type: integer
-          description: Total number of pages
-        page:
-          type: integer
-          description: Current page number
-        hasNextPage:
-          type: boolean
-          description: Whether there is a next page
-        hasPrevPage:
-          type: boolean
-          description: Whether there is a previous page
-
-    # User Related Schemas
     User:
       type: object
+      description: User object (organization will be populated when available)
       properties:
-        id:
-          type: string
-          description: User unique identifier
-        _id:
-          type: string
-          description: MongoDB ObjectId (for compatibility)
-        username:
-          type: string
-          description: Username (3-15 characters)
-        role:
-          type: string
-          enum: [owner, user]
-          description: User role
+        id: { type: string, description: Convenience identifier alias of _id }
+        _id: { type: string }
+        username: { type: string }
+        role: { type: string, enum: [owner, user] }
         organization:
-          type: string
-          description: Organization ID
-        isActive:
-          type: boolean
-          description: Whether user is active
-        lastLogin:
-          type: string
-          format: date-time
-          description: Last login timestamp
-        profileImage:
-          type: string
-          description: Profile image URL
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-      required:
-        - id
-        - username
-        - role
-
-    LoginRequest:
-      type: object
-      properties:
-        username:
-          type: string
-          minLength: 3
-          maxLength: 15
-          description: Username
-        password:
-          type: string
-          minLength: 6
-          description: Password
-      required:
-        - username
-        - password
-      example:
-        username: "testuser"
-        password: "password123"
-
-    RegisterRequest:
-      type: object
-      properties:
-        username:
-          type: string
-          minLength: 3
-          maxLength: 15
-          pattern: "^[a-zA-Z0-9_]+$"
-          description: Username (letters, numbers, underscores only)
-        password:
-          type: string
-          minLength: 6
-          description: Password
+          oneOf:
+            - type: string
+              description: Organization ID when not populated
+            - $ref: "#/components/schemas/Organization"
+          description: Organization reference or populated object
         organizationName:
           type: string
-          maxLength: 100
-          description: Organization name (for owners only)
-        role:
-          type: string
-          enum: [owner, user]
-          default: user
-          description: User role
-      required:
-        - username
-        - password
+          description: Cached organization name for quick display
+        isActive: { type: boolean }
+        lastLogin: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
       example:
-        username: "newuser"
-        password: "password123"
-        organizationName: "My Crusher Business"
+        id: "6891e7637f59e26c132beee4"
+        username: "suresh_owner"
         role: "owner"
-
-    LoginResponse:
+        organization:
+          _id: "6891e7647f59e26c132beeec"
+          name: "Suresh Crusher"
+          owner: "6891e7637f59e26c132beee4"
+          members:
+            - "6891e7637f59e26c132beee4"
+            - "6891e7657f59e26c132bef04"
+          createdAt: "2025-08-05T11:13:40.156Z"
+          updatedAt: "2025-08-05T13:04:25.958Z"
+        organizationName: "Suresh Crusher"
+        lastLogin: "2025-08-09T12:30:57.017Z"
+        isActive: true
+    UserRegistration:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string, minLength: 3, maxLength: 15 }
+        password: { type: string, minLength: 6 }
+        organizationName: { type: string }
+        role: { type: string, enum: [owner, user], default: user }
+    UserLogin:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string }
+        password: { type: string }
+    AuthResponse:
       type: object
       properties:
-        success:
-          type: boolean
-          example: true
-        message:
-          type: string
-          example: "Login successful"
+        success: { type: boolean }
+        message: { type: string }
         data:
           type: object
           properties:
-            token:
-              type: string
-              description: JWT access token
-            refreshToken:
-              type: string
-              description: JWT refresh token
-            user:
-              $ref: "#/components/schemas/User"
-        timestamp:
-          type: string
-          format: date-time
-
-    # Organization Schema
+            token: { type: string }
+            user: { $ref: "#/components/schemas/User" }
     Organization:
       type: object
       properties:
-        id:
-          type: string
-        _id:
-          type: string
-        name:
-          type: string
-          maxLength: 100
-        owner:
-          type: string
-          description: Owner user ID
+        _id: { type: string }
+        name: { type: string }
+        owner: { type: string }
         members:
           type: array
-          items:
-            type: string
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    # Truck Entry Schemas
-    TruckEntry:
-      type: object
-      properties:
-        id:
-          type: string
-        _id:
-          type: string
-        organization:
-          type: string
-          description: Organization ID or name
-        userId:
-          type: object
-          properties:
-            _id:
-              type: string
-            username:
-              type: string
-        truckNumber:
-          type: string
-          pattern: "^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}$"
-          description: Truck number (e.g., KA01AB1234)
-        truckName:
-          type: string
-          maxLength: 50
-          description: Driver name or truck identifier
-        entryType:
-          type: string
-          enum: [Sales, Raw Stone]
-          description: Type of entry
-        materialType:
-          type: string
-          enum:
-            [
-              M-Sand,
-              P-Sand,
-              Blue Metal 0.5in,
-              Blue Metal 0.75in,
-              Jally,
-              Kurunai,
-              Mixed,
-            ]
-          description: Material type (required for Sales entries)
-        units:
-          type: number
-          minimum: 0.1
-          maximum: 100
-          description: Number of units
-        ratePerUnit:
-          type: number
-          minimum: 1
-          description: Rate per unit in INR
-        totalAmount:
-          type: number
-          description: Auto-calculated total amount
-        truckImage:
-          type: string
-          description: URL to truck image
-        entryDate:
-          type: string
-          format: date
-          description: Date of entry
-        entryTime:
-          type: string
-          pattern: "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$"
-          description: Time of entry (HH:MM format)
-        status:
-          type: string
-          enum: [active, deleted]
-          default: active
-        notes:
-          type: string
-          maxLength: 500
-          description: Additional notes
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    TruckEntryCreate:
-      type: object
-      properties:
-        truckNumber:
-          type: string
-          pattern: "^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}$"
-          description: Truck number (e.g., KA01AB1234)
-        truckName:
-          type: string
-          maxLength: 50
-          description: Driver name or truck identifier
-        entryType:
-          type: string
-          enum: [Sales, Raw Stone]
-          description: Type of entry
-        materialType:
-          type: string
-          enum:
-            [
-              M-Sand,
-              P-Sand,
-              Blue Metal 0.5in,
-              Blue Metal 0.75in,
-              Jally,
-              Kurunai,
-              Mixed,
-            ]
-          description: Material type (required for Sales entries)
-        units:
-          type: number
-          minimum: 0.1
-          maximum: 100
-          description: Number of units
-        ratePerUnit:
-          type: number
-          minimum: 1
-          description: Rate per unit in INR
-        entryDate:
-          type: string
-          format: date
-          description: Date of entry
-        entryTime:
-          type: string
-          pattern: "^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$"
-          description: Time of entry (HH:MM format)
-        notes:
-          type: string
-          maxLength: 500
-          description: Additional notes
-      required:
-        - truckNumber
-        - truckName
-        - entryType
-        - units
-        - ratePerUnit
-        - entryDate
-      example:
-        truckNumber: "KA01AB1234"
-        truckName: "Ravi Kumar"
-        entryType: "Sales"
-        materialType: "M-Sand"
-        units: 10
-        ratePerUnit: 2200
-        entryDate: "2024-01-15"
-        entryTime: "14:30"
-        notes: "Quality material"
-
-    # Material Rate Schema
+          items: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
     MaterialRate:
       type: object
       properties:
-        id:
-          type: string
-        materialType:
-          type: string
-          description: Type of material
-        currentRate:
-          type: number
-          description: Current rate per unit
-        lastUpdated:
-          type: string
-          format: date-time
-        updatedBy:
-          type: string
-          description: User who updated the rate
-        organization:
-          type: string
-          description: Organization ID
-        isActive:
-          type: boolean
-          default: true
-
-    # Dashboard Summary Schema
-    DashboardSummary:
+        _id: { type: string }
+        materialType: { type: string }
+        currentRate: { type: number }
+        previousRate: { type: number }
+        effectiveDate: { type: string, format: date-time }
+        updatedBy: { type: string }
+    TruckEntry:
       type: object
       properties:
-        period:
-          type: string
-          description: Time period for summary
-        dateRange:
+        _id: { type: string }
+        organization: { type: string }
+        userId:
           type: object
           properties:
-            startDate:
-              type: string
-              format: date-time
-            endDate:
-              type: string
-              format: date-time
-        summary:
-          type: object
-          properties:
-            totalSales:
-              type: number
-              description: Total sales amount
-            totalRawStone:
-              type: number
-              description: Total raw stone expenses
-            totalOtherExpenses:
-              type: number
-              description: Total other expenses
-            totalExpenses:
-              type: number
-              description: Combined expenses
-            netProfit:
-              type: number
-              description: Net profit (sales - expenses)
-            salesCount:
-              type: integer
-              description: Number of sales entries
-            rawStoneCount:
-              type: integer
-              description: Number of raw stone entries
-            otherExpensesCount:
-              type: integer
-              description: Number of other expense entries
-            totalEntries:
-              type: integer
-              description: Total number of entries
-        todayEntries:
-          type: integer
-          description: Number of entries today
-        recentEntries:
-          type: array
-          items:
-            $ref: "#/components/schemas/TruckEntry"
-        materialBreakdown:
-          type: array
-          items:
-            type: object
-            properties:
-              _id:
-                type: string
-                description: Material type
-              totalAmount:
-                type: number
-              totalUnits:
-                type: number
-              count:
-                type: integer
-              avgRate:
-                type: number
-
-    # Other Expense Schema
+            _id: { type: string }
+            username: { type: string }
+        truckNumber: { type: string }
+        truckName: { type: string }
+        entryType: { type: string, enum: [Sales, Raw Stone] }
+        materialType: { type: string }
+        units: { type: number }
+        ratePerUnit: { type: number }
+        totalAmount: { type: number }
+        truckImage: { type: string }
+        entryDate: { type: string, format: date }
+        entryTime: { type: string }
+        status: { type: string, enum: [active, deleted] }
+        notes: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    TruckEntryCreate:
+      type: object
+      required:
+        [truckNumber, truckName, entryType, units, ratePerUnit, entryDate]
+      properties:
+        truckNumber: { type: string }
+        truckName: { type: string }
+        entryType: { type: string, enum: [Sales, Raw Stone] }
+        materialType: { type: string }
+        units: { type: number }
+        ratePerUnit: { type: number }
+        entryDate: { type: string, format: date }
+        entryTime: { type: string }
+        notes: { type: string }
     OtherExpense:
       type: object
       properties:
-        id:
-          type: string
-        organization:
-          type: string
-          description: Organization ID
-        user:
-          type: string
-          description: User ID who created the expense
-        expensesName:
-          type: string
-          maxLength: 100
-          description: Type of expense
-        amount:
-          type: number
-          minimum: 1
-          description: Expense amount
-        others:
-          type: string
-          maxLength: 500
-          description: Additional details
-        date:
-          type: string
-          format: date
-          description: Date of expense
-        isActive:
-          type: boolean
-          default: true
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    # Report Schema
-    ReportData:
+        _id: { type: string }
+        organization: { type: string }
+        user: { type: string }
+        expensesName: { type: string }
+        amount: { type: number }
+        others: { type: string }
+        notes: { type: string }
+        date: { type: string, format: date }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    DashboardSummary:
       type: object
       properties:
-        entries:
-          type: array
-          items:
-            $ref: "#/components/schemas/TruckEntry"
-        summary:
-          $ref: "#/components/schemas/DashboardSummary"
-        groupedData:
-          type: array
-          items:
-            type: object
-        filters:
-          type: object
+        totalSales: { type: number }
+        totalRawStone: { type: number }
+        totalOtherExpenses: { type: number }
+        totalExpenses: { type: number }
+        netProfit: { type: number }
+        salesCount: { type: integer }
+        rawStoneCount: { type: integer }
+        otherExpensesCount: { type: integer }
+        totalEntries: { type: integer }
+    ErrorResponse:
+      type: object
+      required: [success, message]
+      properties:
+        success: { type: boolean, example: false }
+        message: { type: string }
+        error: { type: string }
+        code: { type: string, description: "Application specific error code" }
+        timestamp: { type: string, format: date-time }
+    Pagination:
+      type: object
+      properties:
+        currentPage: { type: integer, example: 1 }
+        totalPages: { type: integer, example: 5 }
+        totalItems: { type: integer, example: 50 }
+        pageSize: { type: integer, example: 10 }
+    StandardSuccess:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        message: { type: string, example: Operation successful }
+        timestamp: { type: string, format: date-time }
+        data: { type: object }
+    AuthSuccessResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardSuccess"
+        - type: object
           properties:
-            startDate:
-              type: string
-              format: date
-            endDate:
-              type: string
-              format: date
-            entryType:
-              type: string
-            materialType:
-              type: string
-            truckNumber:
-              type: string
-            userId:
-              type: string
-            groupBy:
-              type: string
-        pagination:
-          $ref: "#/components/schemas/PaginationMeta"
-
-    # Error Schema
-    Error:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: false
-        message:
-          type: string
-          description: Error message
-        error:
-          type: string
-          description: Detailed error information
-        timestamp:
-          type: string
-          format: date-time
-      required:
-        - success
-        - message
-        - timestamp
-
+            data:
+              type: object
+              properties:
+                token: { type: string }
+                user: { $ref: "#/components/schemas/User" }
+          example:
+            success: true
+            message: "Login successful"
+            timestamp: "2025-08-09T12:30:57.050Z"
+            data:
+              token: "<jwt-token>"
+              user:
+                id: "6891e7637f59e26c132beee4"
+                username: "suresh_owner"
+                role: "owner"
+                organization:
+                  _id: "6891e7647f59e26c132beeec"
+                  name: "Suresh Crusher"
+                  owner: "6891e7637f59e26c132beee4"
+                  members:
+                    - "6891e7637f59e26c132beee4"
+                    - "6891e7657f59e26c132bef04"
+                  createdAt: "2025-08-05T11:13:40.156Z"
+                  updatedAt: "2025-08-05T13:04:25.958Z"
+                organizationName: "Suresh Crusher"
+                lastLogin: "2025-08-09T12:30:57.017Z"
+    UsersListResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardSuccess"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                users:
+                  type: array
+                  items: { $ref: "#/components/schemas/User" }
+                pagination: { $ref: "#/components/schemas/Pagination" }
+    TruckEntryListResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardSuccess"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                truckEntries:
+                  type: array
+                  items: { $ref: "#/components/schemas/TruckEntry" }
+                pagination: { $ref: "#/components/schemas/Pagination" }
+    TruckEntryDetailResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardSuccess"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                truckEntry: { $ref: "#/components/schemas/TruckEntry" }
+    TruckEntryCreateResponse:
+      allOf:
+        - $ref: "#/components/schemas/TruckEntryDetailResponse"
+    MaterialRateListResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardSuccess"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                materialRates:
+                  type: array
+                  items: { $ref: "#/components/schemas/MaterialRate" }
+    OtherExpenseListResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardSuccess"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                expenses:
+                  type: array
+                  items: { $ref: "#/components/schemas/OtherExpense" }
+                pagination: { $ref: "#/components/schemas/Pagination" }
+    OtherExpenseDetailResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardSuccess"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                expense: { $ref: "#/components/schemas/OtherExpense" }
+    OtherExpenseSummaryResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardSuccess"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                totalAmount: { type: number }
+                totalCount: { type: integer }
+    ReportTemplatesResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardSuccess"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                templates:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      name: { type: string }
+                      description: { type: string }
+                      formats:
+                        type: array
+                        items: { type: string }
+    ReportDataResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardSuccess"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                reportData: { type: object }
+    ReportExportTokenResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardSuccess"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                downloadUrl: { type: string }
+                fileName: { type: string }
+                fileSize: { type: string }
+                expiresAt: { type: string, format: date-time }
+    ConfigAppResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardSuccess"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                config: { type: object }
+    ConfigRatesResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardSuccess"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                rates:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      materialType: { type: string }
+                      currentRate: { type: number }
+                      lastUpdated: { type: string, format: date-time }
+                previewUnits: { type: number }
+    ConfigCalculateResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardSuccess"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                calculation:
+                  type: object
+                  properties:
+                    units: { type: number }
+                    ratePerUnit: { type: number }
+                    totalAmount: { type: number }
+                formatted: { type: object }
+    ConfigValidateResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardSuccess"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                isValid: { type: boolean }
+                errors:
+                  type: array
+                  items: { type: string }
+                warnings:
+                  type: array
+                  items: { type: string }
+                validatedData: { type: object }
+    DashboardSummaryResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardSuccess"
+        - type: object
+          properties:
+            data: { $ref: "#/components/schemas/DashboardSummary" }
+    HealthBasicResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardSuccess"
+        - type: object
+          properties:
+            message:
+              { type: string, example: "CrusherMate API Server is running!" }
+    HealthDetailedResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardSuccess"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                status: { type: string, example: healthy }
+                uptime: { type: string }
+                database: { type: object }
+                environment: { type: string }
+                version: { type: string }
+    HealthDBResponse:
+      allOf:
+        - $ref: "#/components/schemas/StandardSuccess"
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                status: { type: string, example: connected }
+                database: { type: string }
+                host: { type: string }
+  responses:
+    UnauthorizedError:
+      description: Unauthorized - missing or invalid token
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    ForbiddenError:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    ValidationError:
+      description: Validation failed
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
 paths:
-  # Health Check Endpoints
   /health:
     get:
-      tags:
-        - Health
+      tags: [Health]
       summary: Basic health check
-      description: Check if the server is running
       responses:
         "200":
-          description: Server is healthy
+          description: OK
           content:
             application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                    example: "CrusherMate API Server is running!"
-                  timestamp:
-                    type: string
-                    format: date-time
-                  version:
-                    type: string
-                    example: "1.0.0"
-                  database:
-                    type: string
-                    enum: [connected, disconnected]
-
+              schema: { $ref: "#/components/schemas/HealthBasicResponse" }
+        "500": { $ref: "#/components/responses/InternalServerError" }
   /ping:
     get:
-      tags:
-        - Health
-      summary: Simple ping endpoint
-      description: Simple ping to check server responsiveness
+      tags: [Health]
+      summary: Ping
       responses:
         "200":
-          description: Server is responding
+          description: Pong
           content:
             application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                    example: "Pong! Server is responding"
-                  timestamp:
-                    type: string
-                    format: date-time
-
+              schema: { $ref: "#/components/schemas/HealthBasicResponse" }
   /api/health:
     get:
-      tags:
-        - Health
-      summary: Detailed health check
-      description: Comprehensive server health information
+      tags: [Health]
+      summary: Detailed health
       responses:
         "200":
-          description: Detailed server health information
+          description: OK
           content:
             application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      status:
-                        type: string
-                        example: "healthy"
-                      uptime:
-                        type: string
-                        example: "2h 30m 45s"
-                      database:
-                        type: object
-                        properties:
-                          status:
-                            type: string
-                          name:
-                            type: string
-                          host:
-                            type: string
-                      environment:
-                        type: string
-                      version:
-                        type: string
-
+              schema: { $ref: "#/components/schemas/HealthDetailedResponse" }
+        "500": { $ref: "#/components/responses/InternalServerError" }
   /api/health/db:
     get:
-      tags:
-        - Health
-      summary: Database connectivity test
-      description: Test database connection with timeout
+      tags: [Health]
+      summary: DB health
       responses:
         "200":
-          description: Database connection is healthy
+          description: Connected
           content:
             application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                    example: "Database connection is healthy"
-                  data:
-                    type: object
-                    properties:
-                      status:
-                        type: string
-                        example: "connected"
-                      timestamp:
-                        type: string
-                        format: date-time
-                      database:
-                        type: string
-                      host:
-                        type: string
-        "503":
-          description: Database connection failed
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  # Authentication Endpoints
+              schema: { $ref: "#/components/schemas/HealthDBResponse" }
+        "503": { $ref: "#/components/responses/InternalServerError" }
   /api/auth/register:
     post:
-      tags:
-        - Authentication
-      summary: User registration
-      description: Register a new user and optionally create an organization
+      tags: [Authentication]
+      summary: Register
+      security: []
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: "#/components/schemas/RegisterRequest"
+            schema: { $ref: "#/components/schemas/UserRegistration" }
       responses:
         "201":
-          description: User registered successfully
+          description: Created
           content:
             application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                    example: "User registered successfully"
-                  data:
-                    type: object
-                    properties:
-                      user:
-                        $ref: "#/components/schemas/User"
-                      organization:
-                        $ref: "#/components/schemas/Organization"
-        "400":
-          description: Registration failed
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
+              schema: { $ref: "#/components/schemas/AuthSuccessResponse" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "500": { $ref: "#/components/responses/InternalServerError" }
   /api/auth/login:
     post:
-      tags:
-        - Authentication
-      summary: User login
-      description: Authenticate user and return JWT tokens
+      tags: [Authentication]
+      summary: Login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserLogin" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSuccessResponse" }
+              examples:
+                populatedOrganization:
+                  summary: Successful login with populated organization
+                  value:
+                    success: true
+                    message: "Login successful"
+                    timestamp: "2025-08-09T12:30:57.050Z"
+                    data:
+                      token: "<jwt-token>"
+                      user:
+                        id: "6891e7637f59e26c132beee4"
+                        username: "suresh_owner"
+                        role: "owner"
+                        organization:
+                          _id: "6891e7647f59e26c132beeec"
+                          name: "Suresh Crusher"
+                          owner: "6891e7637f59e26c132beee4"
+                          members:
+                            - "6891e7637f59e26c132beee4"
+                            - "6891e7657f59e26c132bef04"
+                          createdAt: "2025-08-05T11:13:40.156Z"
+                          updatedAt: "2025-08-05T13:04:25.958Z"
+                        organizationName: "Suresh Crusher"
+                        lastLogin: "2025-08-09T12:30:57.017Z"
+                        isActive: true
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+        "500": { $ref: "#/components/responses/InternalServerError" }
+  /api/auth/verify-token:
+    get:
+      tags: [Authentication]
+      summary: Verify token
+      responses:
+        "200":
+          description: Valid
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSuccessResponse" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+  /api/auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StandardSuccess" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+  /api/auth/profile:
+    get:
+      tags: [Authentication]
+      summary: Current profile
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSuccessResponse" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+        "404": { $ref: "#/components/responses/NotFoundError" }
+  /api/users/profile:
+    get:
+      tags: [Users]
+      summary: Get user profile
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSuccessResponse" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+        "404": { $ref: "#/components/responses/NotFoundError" }
+    put:
+      tags: [Users]
+      summary: Update user profile
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/LoginRequest"
+              type: object
+              properties:
+                username: { type: string }
+                mobileNumber: { type: string }
       responses:
         "200":
-          description: Login successful
+          description: Updated
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/LoginResponse"
-        "401":
-          description: Invalid credentials
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  /api/auth/verify-token:
+              schema: { $ref: "#/components/schemas/AuthSuccessResponse" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+  /api/users:
     get:
-      tags:
-        - Authentication
-      summary: Verify JWT token
-      description: Verify if the provided JWT token is valid
-      security:
-        - bearerAuth: []
+      tags: [Users]
+      summary: List users (owner)
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer }
+        - in: query
+          name: limit
+          schema: { type: integer }
+        - in: query
+          name: search
+          schema: { type: string }
+        - in: query
+          name: role
+          schema: { type: string, enum: [owner, user] }
       responses:
         "200":
-          description: Token is valid
+          description: OK
           content:
             application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                    example: "Token is valid"
-                  data:
-                    type: object
-                    properties:
-                      user:
-                        $ref: "#/components/schemas/User"
-        "401":
-          description: Invalid or expired token
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  /api/auth/logout:
-    post:
-      tags:
-        - Authentication
-      summary: User logout
-      description: Logout user and invalidate tokens
-      security:
-        - bearerAuth: []
-      responses:
-        "200":
-          description: Logout successful
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                    example: "Logout successful"
-
-  /api/auth/profile:
+              schema: { $ref: "#/components/schemas/UsersListResponse" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+        "403": { $ref: "#/components/responses/ForbiddenError" }
+  /api/users/{id}:
     get:
-      tags:
-        - Authentication
-      summary: Get user profile
-      description: Get current user's profile information
-      security:
-        - bearerAuth: []
+      tags: [Users]
+      summary: Get user (owner)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
       responses:
         "200":
-          description: Profile retrieved successfully
+          description: OK
           content:
             application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                  data:
-                    $ref: "#/components/schemas/User"
-
-  # Truck Entry Endpoints
+              schema: { $ref: "#/components/schemas/StandardSuccess" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+        "403": { $ref: "#/components/responses/ForbiddenError" }
+        "404": { $ref: "#/components/responses/NotFoundError" }
+    delete:
+      tags: [Users]
+      summary: Delete user (owner)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          {
+            description: Deleted,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/StandardSuccess" } },
+              },
+          }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+        "403": { $ref: "#/components/responses/ForbiddenError" }
+        "404": { $ref: "#/components/responses/NotFoundError" }
+  /api/users/{id}/status:
+    put:
+      tags: [Users]
+      summary: Update status (owner)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [isActive]
+              properties:
+                isActive: { type: boolean }
+      responses:
+        "200":
+          {
+            description: Updated,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/StandardSuccess" } },
+              },
+          }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+        "403": { $ref: "#/components/responses/ForbiddenError" }
+        "404": { $ref: "#/components/responses/NotFoundError" }
   /api/truck-entries:
     get:
-      tags:
-        - Truck Entries
-      summary: Get truck entries
-      description: Retrieve truck entries with pagination and filtering
-      security:
-        - bearerAuth: []
+      tags: [Truck Entries]
+      summary: List truck entries
       parameters:
-        - name: page
-          in: query
-          description: Page number
-          schema:
-            type: integer
-            minimum: 1
-            default: 1
-        - name: limit
-          in: query
-          description: Number of items per page
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 10
-        - name: sortBy
-          in: query
-          description: Field to sort by
-          schema:
-            type: string
-            default: entryDate
-        - name: sortOrder
-          in: query
-          description: Sort order
-          schema:
-            type: string
-            enum: [asc, desc]
-            default: desc
-        - name: truckNumber
-          in: query
-          description: Filter by truck number
-          schema:
-            type: string
-        - name: entryType
-          in: query
-          description: Filter by entry type
-          schema:
-            type: string
-            enum: [Sales, Raw Stone]
-        - name: materialType
-          in: query
-          description: Filter by material type
-          schema:
-            type: string
-        - name: startDate
-          in: query
-          description: Start date for filtering
-          schema:
-            type: string
-            format: date
-        - name: endDate
-          in: query
-          description: End date for filtering
-          schema:
-            type: string
-            format: date
-        - name: userId
-          in: query
-          description: Filter by user ID (owner only)
-          schema:
-            type: string
+        - in: query
+          name: page
+          schema: { type: integer }
+        - in: query
+          name: limit
+          schema: { type: integer }
       responses:
         "200":
-          description: Truck entries retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                  data:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/TruckEntry"
-                  pagination:
-                    $ref: "#/components/schemas/PaginationMeta"
-        "400":
-          description: Invalid query parameters
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
+          {
+            description: OK,
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      { $ref: "#/components/schemas/TruckEntryListResponse" },
+                  },
+              },
+          }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
     post:
-      tags:
-        - Truck Entries
+      tags: [Truck Entries]
       summary: Create truck entry
-      description: Create a new truck entry (Sales or Raw Stone)
-      security:
-        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -1011,893 +772,366 @@ paths:
                 - $ref: "#/components/schemas/TruckEntryCreate"
                 - type: object
                   properties:
-                    truckImage:
-                      type: string
-                      format: binary
-                      description: Truck image file
-          application/json:
-            schema:
-              $ref: "#/components/schemas/TruckEntryCreate"
+                    truckImage: { type: string, format: binary }
       responses:
         "201":
-          description: Truck entry created successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                    example: "Truck entry created successfully"
-                  data:
-                    type: object
-                    properties:
-                      truckEntry:
-                        $ref: "#/components/schemas/TruckEntry"
-        "400":
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
+          {
+            description: Created,
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      { $ref: "#/components/schemas/TruckEntryCreateResponse" },
+                  },
+              },
+          }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
   /api/truck-entries/summary:
     get:
-      tags:
-        - Truck Entries
-      summary: Get truck entries summary
-      description: Get summary statistics for truck entries
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: startDate
-          in: query
-          description: Start date for summary
-          schema:
-            type: string
-            format: date
-        - name: endDate
-          in: query
-          description: End date for summary
-          schema:
-            type: string
-            format: date
-        - name: userId
-          in: query
-          description: Filter by user ID (owner only)
-          schema:
-            type: string
+      tags: [Truck Entries]
+      summary: Summary
       responses:
         "200":
-          description: Summary retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      summary:
-                        $ref: "#/components/schemas/DashboardSummary"
-
+          {
+            description: OK,
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      { $ref: "#/components/schemas/DashboardSummaryResponse" },
+                  },
+              },
+          }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
   /api/truck-entries/{id}:
     get:
-      tags:
-        - Truck Entries
-      summary: Get truck entry by ID
-      description: Retrieve a specific truck entry by its ID
-      security:
-        - bearerAuth: []
+      tags: [Truck Entries]
+      summary: Get truck entry
       parameters:
-        - name: id
-          in: path
+        - in: path
+          name: id
           required: true
-          description: Truck entry ID
-          schema:
-            type: string
+          schema: { type: string }
       responses:
         "200":
-          description: Truck entry retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                  data:
-                    $ref: "#/components/schemas/TruckEntry"
-        "404":
-          description: Truck entry not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
+          {
+            description: OK,
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      { $ref: "#/components/schemas/TruckEntryDetailResponse" },
+                  },
+              },
+          }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+        "404": { $ref: "#/components/responses/NotFoundError" }
     put:
-      tags:
-        - Truck Entries
+      tags: [Truck Entries]
       summary: Update truck entry
-      description: Update an existing truck entry
-      security:
-        - bearerAuth: []
       parameters:
-        - name: id
-          in: path
+        - in: path
+          name: id
           required: true
-          description: Truck entry ID
-          schema:
-            type: string
+          schema: { type: string }
       requestBody:
         required: true
         content:
           multipart/form-data:
-            schema:
-              $ref: "#/components/schemas/TruckEntryCreate"
-          application/json:
-            schema:
-              $ref: "#/components/schemas/TruckEntryCreate"
+            schema: { $ref: "#/components/schemas/TruckEntryCreate" }
       responses:
         "200":
-          description: Truck entry updated successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                    example: "Truck entry updated successfully"
-                  data:
-                    type: object
-                    properties:
-                      truckEntry:
-                        $ref: "#/components/schemas/TruckEntry"
-        "404":
-          description: Truck entry not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "403":
-          description: Access denied
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
+          {
+            description: Updated,
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      { $ref: "#/components/schemas/TruckEntryDetailResponse" },
+                  },
+              },
+          }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+        "404": { $ref: "#/components/responses/NotFoundError" }
     delete:
-      tags:
-        - Truck Entries
+      tags: [Truck Entries]
       summary: Delete truck entry
-      description: Soft delete a truck entry (sets status to 'deleted')
-      security:
-        - bearerAuth: []
       parameters:
-        - name: id
-          in: path
+        - in: path
+          name: id
           required: true
-          description: Truck entry ID
-          schema:
-            type: string
+          schema: { type: string }
       responses:
         "200":
-          description: Truck entry deleted successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                    example: "Truck entry deleted successfully"
-                  data:
-                    type: "null"
-        "404":
-          description: Truck entry not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-        "403":
-          description: Access denied
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  # Dashboard Endpoints
-  /api/dashboard/summary:
-    get:
-      tags:
-        - Dashboard
-      summary: Get dashboard summary
-      description: Get comprehensive dashboard summary with metrics
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: period
-          in: query
-          description: Time period for summary
-          schema:
-            type: string
-            enum: [today, yesterday, week, month, year]
-            default: month
-        - name: startDate
-          in: query
-          description: Custom start date
-          schema:
-            type: string
-            format: date
-        - name: endDate
-          in: query
-          description: Custom end date
-          schema:
-            type: string
-            format: date
-        - name: userId
-          in: query
-          description: Filter by user ID (owner only)
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Dashboard summary retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                  data:
-                    $ref: "#/components/schemas/DashboardSummary"
-
-  /api/dashboard/financial:
-    get:
-      tags:
-        - Dashboard
-      summary: Get financial metrics
-      description: Get detailed financial metrics and trends
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: period
-          in: query
-          description: Time period for metrics
-          schema:
-            type: string
-            enum: [today, yesterday, week, month, year]
-            default: month
-        - name: userId
-          in: query
-          description: Filter by user ID (owner only)
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Financial metrics retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      period:
-                        type: string
-                      dateRange:
-                        type: object
-                        properties:
-                          startDate:
-                            type: string
-                            format: date-time
-                          endDate:
-                            type: string
-                            format: date-time
-                      dailyBreakdown:
-                        type: array
-                        items:
-                          type: object
-
-  /api/dashboard/stats:
-    get:
-      tags:
-        - Dashboard
-      summary: Get dashboard statistics (Owner only)
-      description: Get comprehensive statistics including user performance
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: period
-          in: query
-          description: Time period for statistics
-          schema:
-            type: string
-            enum: [today, yesterday, week, month, year]
-            default: month
-      responses:
-        "200":
-          description: Dashboard statistics retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      period:
-                        type: string
-                      dateRange:
-                        type: object
-                      userStats:
-                        type: object
-                        properties:
-                          totalUsers:
-                            type: integer
-                          newUsersThisPeriod:
-                            type: integer
-                          activeUsersCount:
-                            type: integer
-                          topUsers:
-                            type: array
-                      overallSummary:
-                        $ref: "#/components/schemas/DashboardSummary"
-        "403":
-          description: Owner access required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  # Material Rates Endpoints
+          {
+            description: Deleted,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/StandardSuccess" } },
+              },
+          }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+        "404": { $ref: "#/components/responses/NotFoundError" }
   /api/material-rates:
     get:
-      tags:
-        - Material Rates
-      summary: Get material rates
-      description: Get all material rates for the organization
-      security:
-        - bearerAuth: []
+      tags: [Material Rates]
+      summary: List material rates
       responses:
         "200":
-          description: Material rates retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                  data:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/MaterialRate"
-
+          {
+            description: OK,
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      { $ref: "#/components/schemas/MaterialRateListResponse" },
+                  },
+              },
+          }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
     post:
-      tags:
-        - Material Rates
-      summary: Update material rate (Owner only)
-      description: Create or update a material rate
-      security:
-        - bearerAuth: []
+      tags: [Material Rates]
+      summary: Update rate (owner)
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              required: [materialType, rate]
               properties:
-                materialType:
-                  type: string
-                  description: Type of material
-                rate:
-                  type: number
-                  minimum: 1
-                  description: Rate per unit
-              required:
-                - materialType
-                - rate
-              example:
-                materialType: "M-Sand"
-                rate: 2200
+                materialType: { type: string }
+                rate: { type: number }
       responses:
-        "201":
-          description: Rate updated successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                    example: "Rate for M-Sand updated successfully"
-                  data:
-                    $ref: "#/components/schemas/MaterialRate"
-        "403":
-          description: Owner access required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  # Configuration Endpoints
+        "200":
+          {
+            description: Updated,
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      { $ref: "#/components/schemas/MaterialRateListResponse" },
+                  },
+              },
+          }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+        "403": { $ref: "#/components/responses/ForbiddenError" }
   /api/config/app:
     get:
-      tags:
-        - Configuration
-      summary: Get app configuration
-      description: Get application configuration including dropdowns and rates
-      security:
-        - bearerAuth: []
+      tags: [Configuration]
+      summary: App config
       responses:
         "200":
-          description: Configuration retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      entryTypes:
-                        type: array
-                        items:
-                          type: string
-                        example: ["Sales", "Raw Stone"]
-                      materialTypes:
-                        type: object
-                        properties:
-                          Sales:
-                            type: array
-                            items:
-                              type: string
-                            example:
-                              [
-                                "M-Sand",
-                                "P-Sand",
-                                "Blue Metal 0.5in",
-                                "Blue Metal 0.75in",
-                                "Jally",
-                                "Kurunai",
-                                "Mixed",
-                              ]
-                          "Raw Stone":
-                            type: array
-                            items:
-                              type: string
-                            example: []
-                      materialRates:
-                        type: object
-                        additionalProperties:
-                          type: object
-                          properties:
-                            currentRate:
-                              type: number
-                            lastUpdated:
-                              type: string
-                              format: date-time
-                      businessRules:
-                        type: object
-
+          {
+            description: OK,
+            content:
+              {
+                application/json:
+                  {
+                    schema: { $ref: "#/components/schemas/ConfigAppResponse" },
+                  },
+              },
+          }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
   /api/config/rates:
     get:
-      tags:
-        - Configuration
-      summary: Get current rates with calculation preview
-      description: Get current material rates with calculation preview for specified units
-      security:
-        - bearerAuth: []
+      tags: [Configuration]
+      summary: Current rates
       parameters:
-        - name: units
-          in: query
-          description: Number of units for calculation preview
-          schema:
-            type: number
-            default: 1
+        - in: query
+          name: units
+          schema: { type: number }
       responses:
         "200":
-          description: Rates with calculations retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      rates:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            materialType:
-                              type: string
-                            currentRate:
-                              type: number
-                            lastUpdated:
-                              type: string
-                              format: date-time
-                            calculation:
-                              type: object
-                              properties:
-                                units:
-                                  type: number
-                                totalAmount:
-                                  type: number
-                                formatted:
-                                  type: object
-                      previewUnits:
-                        type: number
-
+          {
+            description: OK,
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      { $ref: "#/components/schemas/ConfigRatesResponse" },
+                  },
+              },
+          }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
   /api/config/calculate:
     post:
-      tags:
-        - Configuration
-      summary: Calculate total amount
-      description: Calculate total amount for given units and rate
-      security:
-        - bearerAuth: []
+      tags: [Configuration]
+      summary: Calculate total
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              required: [units, ratePerUnit]
               properties:
-                units:
-                  type: number
-                  minimum: 0.1
-                  maximum: 100
-                ratePerUnit:
-                  type: number
-                  minimum: 1
-                materialType:
-                  type: string
-              required:
-                - units
-                - ratePerUnit
-              example:
-                units: 10
-                ratePerUnit: 2200
-                materialType: "M-Sand"
+                units: { type: number }
+                ratePerUnit: { type: number }
+                materialType: { type: string }
       responses:
         "200":
-          description: Calculation completed successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      calculation:
-                        type: object
-                        properties:
-                          units:
-                            type: number
-                          ratePerUnit:
-                            type: number
-                          totalAmount:
-                            type: number
-                      formatted:
-                        type: object
-                        properties:
-                          units:
-                            type: string
-                          ratePerUnit:
-                            type: string
-                          totalAmount:
-                            type: string
-                          breakdown:
-                            type: string
-
+          {
+            description: OK,
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      { $ref: "#/components/schemas/ConfigCalculateResponse" },
+                  },
+              },
+          }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
   /api/config/validate:
     post:
-      tags:
-        - Configuration
-      summary: Validate truck entry data
-      description: Validate truck entry data before submission
-      security:
-        - bearerAuth: []
+      tags: [Configuration]
+      summary: Validate truck entry
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              required: [truckNumber, entryType, units, ratePerUnit]
               properties:
-                truckNumber:
-                  type: string
-                entryType:
-                  type: string
-                materialType:
-                  type: string
-                units:
-                  type: number
-                ratePerUnit:
-                  type: number
-              required:
-                - truckNumber
-                - entryType
-                - units
-                - ratePerUnit
+                truckNumber: { type: string }
+                entryType: { type: string }
+                materialType: { type: string }
+                units: { type: number }
+                ratePerUnit: { type: number }
       responses:
         "200":
-          description: Validation completed
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      isValid:
-                        type: boolean
-                      errors:
-                        type: array
-                        items:
-                          type: string
-                      warnings:
-                        type: array
-                        items:
-                          type: string
-                      validatedData:
-                        type: object
-
-  # Other Expenses Endpoints
+          {
+            description: OK,
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      { $ref: "#/components/schemas/ConfigValidateResponse" },
+                  },
+              },
+          }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
   /api/expenses:
     get:
-      tags:
-        - Other Expenses
-      summary: Get other expenses
-      description: Get all other expenses with filtering and pagination
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: page
-          in: query
-          schema:
-            type: integer
-            minimum: 1
-            default: 1
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 10
-        - name: startDate
-          in: query
-          schema:
-            type: string
-            format: date
-        - name: endDate
-          in: query
-          schema:
-            type: string
-            format: date
+      tags: [Other Expenses]
+      summary: List other expenses
       responses:
         "200":
-          description: Other expenses retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                  data:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/OtherExpense"
-
+          {
+            description: OK,
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      { $ref: "#/components/schemas/OtherExpenseListResponse" },
+                  },
+              },
+          }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
     post:
-      tags:
-        - Other Expenses
+      tags: [Other Expenses]
       summary: Create other expense
-      description: Create a new other expense entry
-      security:
-        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              required: [expensesName, amount, date]
               properties:
-                expensesName:
-                  type: string
-                  maxLength: 100
-                amount:
-                  type: number
-                  minimum: 1
-                others:
-                  type: string
-                  maxLength: 500
-                date:
-                  type: string
-                  format: date
-              required:
-                - expensesName
-                - amount
-                - date
-              example:
-                expensesName: "Fuel"
-                amount: 5000
-                others: "Fuel for crushing machine"
-                date: "2024-01-15"
+                expensesName: { type: string }
+                amount: { type: number }
+                others: { type: string }
+                notes: { type: string }
+                date: { type: string, format: date }
       responses:
         "201":
-          description: Other expense created successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                  data:
-                    $ref: "#/components/schemas/OtherExpense"
-
+          {
+            description: Created,
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      {
+                        $ref: "#/components/schemas/OtherExpenseDetailResponse",
+                      },
+                  },
+              },
+          }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
   /api/expenses/summary:
     get:
-      tags:
-        - Other Expenses
-      summary: Get other expenses summary
-      description: Get summary statistics for other expenses
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: startDate
-          in: query
-          schema:
-            type: string
-            format: date
-        - name: endDate
-          in: query
-          schema:
-            type: string
-            format: date
+      tags: [Other Expenses]
+      summary: Expense summary
       responses:
         "200":
-          description: Other expenses summary retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      totalAmount:
-                        type: number
-                      count:
-                        type: integer
-
+          {
+            description: OK,
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      {
+                        $ref: "#/components/schemas/OtherExpenseSummaryResponse",
+                      },
+                  },
+              },
+          }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
   /api/expenses/{id}:
     get:
-      tags:
-        - Other Expenses
-      summary: Get other expense by ID
-      description: Get a specific other expense by ID
-      security:
-        - bearerAuth: []
+      tags: [Other Expenses]
+      summary: Get other expense
       parameters:
-        - name: id
-          in: path
+        - in: path
+          name: id
           required: true
-          schema:
-            type: string
+          schema: { type: string }
       responses:
         "200":
-          description: Other expense retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                  data:
-                    $ref: "#/components/schemas/OtherExpense"
-        "404":
-          description: Other expense not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
+          {
+            description: OK,
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      {
+                        $ref: "#/components/schemas/OtherExpenseDetailResponse",
+                      },
+                  },
+              },
+          }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+        "404": { $ref: "#/components/responses/NotFoundError" }
     put:
-      tags:
-        - Other Expenses
+      tags: [Other Expenses]
       summary: Update other expense
-      description: Update an existing other expense
-      security:
-        - bearerAuth: []
       parameters:
-        - name: id
-          in: path
+        - in: path
+          name: id
           required: true
-          schema:
-            type: string
+          schema: { type: string }
       requestBody:
         required: true
         content:
@@ -1905,424 +1139,239 @@ paths:
             schema:
               type: object
               properties:
-                expensesName:
-                  type: string
-                  maxLength: 100
-                amount:
-                  type: number
-                  minimum: 1
-                others:
-                  type: string
-                  maxLength: 500
-                date:
-                  type: string
-                  format: date
+                expensesName: { type: string }
+                amount: { type: number }
+                others: { type: string }
+                notes: { type: string }
+                date: { type: string, format: date }
       responses:
         "200":
-          description: Other expense updated successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                  data:
-                    $ref: "#/components/schemas/OtherExpense"
-        "404":
-          description: Other expense not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
+          {
+            description: Updated,
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      {
+                        $ref: "#/components/schemas/OtherExpenseDetailResponse",
+                      },
+                  },
+              },
+          }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+        "404": { $ref: "#/components/responses/NotFoundError" }
     delete:
-      tags:
-        - Other Expenses
+      tags: [Other Expenses]
       summary: Delete other expense
-      description: Soft delete an other expense (sets isActive to false)
-      security:
-        - bearerAuth: []
       parameters:
-        - name: id
-          in: path
+        - in: path
+          name: id
           required: true
-          schema:
-            type: string
+          schema: { type: string }
       responses:
         "200":
-          description: Other expense deleted successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                  data:
-                    type: "null"
-        "404":
-          description: Other expense not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  # Report Endpoints
-  /api/reports/data:
-    get:
-      tags:
-        - Reports
-      summary: Get report data
-      description: Get comprehensive report data with filtering and grouping
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: startDate
-          in: query
-          required: true
-          description: Start date for report
-          schema:
-            type: string
-            format: date
-        - name: endDate
-          in: query
-          required: true
-          description: End date for report
-          schema:
-            type: string
-            format: date
-        - name: entryType
-          in: query
-          description: Filter by entry type
-          schema:
-            type: string
-            enum: [Sales, Raw Stone]
-        - name: materialType
-          in: query
-          description: Filter by material type
-          schema:
-            type: string
-        - name: truckNumber
-          in: query
-          description: Filter by truck number
-          schema:
-            type: string
-        - name: userId
-          in: query
-          description: Filter by user ID
-          schema:
-            type: string
-        - name: groupBy
-          in: query
-          description: Group results by
-          schema:
-            type: string
-            enum: [date, truck, material, user]
-            default: date
-        - name: sortBy
-          in: query
-          description: Sort by field
-          schema:
-            type: string
-            default: entryDate
-        - name: sortOrder
-          in: query
-          description: Sort order
-          schema:
-            type: string
-            enum: [asc, desc]
-            default: desc
-        - name: page
-          in: query
-          description: Page number
-          schema:
-            type: integer
-            minimum: 1
-            default: 1
-        - name: limit
-          in: query
-          description: Items per page
-          schema:
-            type: integer
-            minimum: 1
-            maximum: 100
-            default: 50
-      responses:
-        "200":
-          description: Report data retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                  data:
-                    $ref: "#/components/schemas/ReportData"
-        "400":
-          description: Start date and end date are required
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  /api/reports/export:
-    post:
-      tags:
-        - Reports
-      summary: Generate export data
-      description: Generate PDF export for report data
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                startDate:
-                  type: string
-                  format: date
-                endDate:
-                  type: string
-                  format: date
-                format:
-                  type: string
-                  enum: [pdf, csv, excel]
-                  default: pdf
-                entryType:
-                  type: string
-                  enum: [Sales, Raw Stone]
-                materialType:
-                  type: string
-                truckNumber:
-                  type: string
-                includeCharts:
-                  type: boolean
-                  default: true
-              required:
-                - startDate
-                - endDate
-              example:
-                startDate: "2024-01-01"
-                endDate: "2024-01-31"
-                format: "pdf"
-                includeCharts: true
-      responses:
-        "200":
-          description: Export generated successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      downloadUrl:
-                        type: string
-                      filename:
-                        type: string
-                      format:
-                        type: string
-                      expiresAt:
-                        type: string
-                        format: date-time
-
-  /api/reports/browser-download:
-    post:
-      tags:
-        - Reports
-      summary: Generate browser download
-      description: Generate a secure download token for browser-based downloads
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                startDate:
-                  type: string
-                  format: date
-                endDate:
-                  type: string
-                  format: date
-                format:
-                  type: string
-                  enum: [pdf, csv]
-                  default: pdf
-              required:
-                - startDate
-                - endDate
-      responses:
-        "200":
-          description: Download token generated successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      downloadUrl:
-                        type: string
-                        description: URL for downloading the report
-                      token:
-                        type: string
-                        description: Download token
-                      expiresAt:
-                        type: string
-                        format: date-time
-
+          {
+            description: Deleted,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/StandardSuccess" } },
+              },
+          }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+        "404": { $ref: "#/components/responses/NotFoundError" }
   /api/reports/templates:
     get:
-      tags:
-        - Reports
-      summary: Get report templates
-      description: Get available report templates
-      security:
-        - bearerAuth: []
+      tags: [Reports]
+      summary: Report templates
       responses:
         "200":
-          description: Report templates retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                  data:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                        name:
-                          type: string
-                        description:
-                          type: string
-                        defaultFilters:
-                          type: object
-
-  /api/reports/download/{token}:
+          {
+            description: OK,
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      { $ref: "#/components/schemas/ReportTemplatesResponse" },
+                  },
+              },
+          }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+  /api/reports/data:
     get:
-      tags:
-        - Reports
-      summary: Download report with token
-      description: Download generated report using secure token (public endpoint)
+      tags: [Reports]
+      summary: Report data
       parameters:
-        - name: token
-          in: path
-          required: true
-          description: Download token
-          schema:
-            type: string
+        - in: query
+          name: reportType
+          schema: { type: string }
       responses:
         "200":
-          description: File downloaded successfully
-          content:
-            application/pdf:
-              schema:
-                type: string
-                format: binary
-            text/csv:
-              schema:
-                type: string
-            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
-              schema:
-                type: string
-                format: binary
-        "404":
-          description: Invalid or expired token
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Error"
-
-  # Organization Endpoints
-  /api/organizations:
-    get:
-      tags:
-        - Organizations
-      summary: Get all organizations
-      description: Get list of all organizations (admin only)
-      responses:
-        "200":
-          description: Organizations retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                  data:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Organization"
-
+          {
+            description: OK,
+            content:
+              {
+                application/json:
+                  {
+                    schema: { $ref: "#/components/schemas/ReportDataResponse" },
+                  },
+              },
+          }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+  /api/reports/export:
     post:
-      tags:
-        - Organizations
-      summary: Create organization
-      description: Create a new organization
+      tags: [Reports]
+      summary: Generate export
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              required: [reportType, format]
               properties:
-                name:
-                  type: string
-                  maxLength: 100
-              required:
-                - name
+                reportType: { type: string }
+                format: { type: string, enum: [PDF, Excel, CSV] }
+      responses:
+        "200":
+          {
+            description: Generated,
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      {
+                        $ref: "#/components/schemas/ReportExportTokenResponse",
+                      },
+                  },
+              },
+          }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+    get:
+      tags: [Reports]
+      summary: Generate export via GET
+      parameters:
+        - in: query
+          name: reportType
+          schema: { type: string }
+        - in: query
+          name: format
+          schema: { type: string }
+      responses:
+        "200":
+          {
+            description: Generated,
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      {
+                        $ref: "#/components/schemas/ReportExportTokenResponse",
+                      },
+                  },
+              },
+          }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+  /api/reports/browser-download:
+    post:
+      tags: [Reports]
+      summary: Browser download token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reportType, format]
+              properties:
+                reportType: { type: string }
+                format: { type: string }
+      responses:
+        "200":
+          {
+            description: Token issued,
+            content:
+              {
+                application/json:
+                  {
+                    schema:
+                      {
+                        $ref: "#/components/schemas/ReportExportTokenResponse",
+                      },
+                  },
+              },
+          }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/UnauthorizedError" }
+  /api/reports/download/{token}:
+    get:
+      tags: [Reports]
+      summary: Download report
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: File }
+        "404": { $ref: "#/components/responses/NotFoundError" }
+  /api/reports/test-data:
+    get:
+      tags: [Reports]
+      summary: Test DB data
+      responses:
+        "200":
+          {
+            description: OK,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/StandardSuccess" } },
+              },
+          }
+  /api/organizations:
+    get:
+      tags: [Organizations]
+      summary: List organizations
+      responses:
+        "200":
+          {
+            description: OK,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/StandardSuccess" } },
+              },
+          }
+    post:
+      tags: [Organizations]
+      summary: Create organization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
       responses:
         "201":
-          description: Organization created successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                  data:
-                    $ref: "#/components/schemas/Organization"
+          {
+            description: Created,
+            content:
+              {
+                application/json:
+                  { schema: { $ref: "#/components/schemas/StandardSuccess" } },
+              },
+          }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "409": { $ref: "#/components/responses/ValidationError" }

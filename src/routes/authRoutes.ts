@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { AuthController } from "../controllers/authController";
+import { AuthMiddleware } from "../middlewares/auth";
 import { ErrorMiddleware } from "../middlewares/error";
 import { ValidationMiddleware } from "../middlewares/validation";
 
@@ -22,11 +23,20 @@ router.post(
 // Protected routes - authentication required
 router.get(
   "/verify-token",
+  AuthMiddleware.authenticate,
   ErrorMiddleware.asyncHandler(authController.verifyToken)
 );
 
-router.post("/logout", ErrorMiddleware.asyncHandler(authController.logout));
+router.post(
+  "/logout",
+  AuthMiddleware.authenticate,
+  ErrorMiddleware.asyncHandler(authController.logout)
+);
 
-router.get("/profile", ErrorMiddleware.asyncHandler(authController.getProfile));
+router.get(
+  "/profile",
+  AuthMiddleware.authenticate,
+  ErrorMiddleware.asyncHandler(authController.getProfile)
+);
 
 export { router as authRoutes };
