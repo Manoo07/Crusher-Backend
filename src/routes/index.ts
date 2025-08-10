@@ -1,6 +1,12 @@
 import { Router } from "express";
 import { authRoutes } from "./authRoutes";
+import { configRoutes } from "./configRoutes";
+import { dashboardRoutes } from "./dashboardRoutes";
+import { expenseRoutes } from "./expenseRoutes";
+import { materialRateRoutes } from "./materialRateRoutes";
 import { organizationRoutes } from "./organizationRoutes";
+import { reportsRoutes } from "./reportsRoutes";
+import { truckEntryRoutes } from "./truckEntryRoutes";
 import { userRoutes } from "./userRoutes";
 
 const router = Router();
@@ -17,29 +23,13 @@ router.get("/health", (req, res) => {
 
 // Mount route modules
 router.use("/auth", authRoutes);
+router.use("/config", configRoutes);
+router.use("/dashboard", dashboardRoutes);
+router.use("/expenses", expenseRoutes);
+router.use("/material-rates", materialRateRoutes);
 router.use("/organizations", organizationRoutes);
+router.use("/reports", reportsRoutes);
+router.use("/truck-entries", truckEntryRoutes);
 router.use("/users", userRoutes);
-
-// Placeholder routes for future implementation
-router.use("/material-rates", (req, res) => {
-  res.status(501).json({
-    success: false,
-    message: "Material rates API not yet implemented",
-  });
-});
-
-router.use("/truck-entries", (req, res) => {
-  res.status(501).json({
-    success: false,
-    message: "Truck entries API not yet implemented",
-  });
-});
-
-router.use("/expenses", (req, res) => {
-  res.status(501).json({
-    success: false,
-    message: "Other expenses API not yet implemented",
-  });
-});
 
 export { router as apiRoutes };

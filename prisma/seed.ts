@@ -1,5 +1,11 @@
-// Production Database Seeding Script for Prisma
-import { PrismaClient, UserRole } from "@prisma/client";
+/* Dev Seed Script for Prisma (PostgreSQL)
+ * Mirrors existing Mongo dev seed: creates owner admin, test user,
+ * default material rates, sample truck entries, sample other expenses.
+ * Idempotent: safe to run multiple times.
+ * CLEARS existing data first for development purposes.
+ */
+
+import { EntryStatus, EntryType, PrismaClient, UserRole } from "@prisma/client";
 import * as bcrypt from "bcrypt";
 import * as dotenv from "dotenv";
 
@@ -8,193 +14,309 @@ dotenv.config();
 
 const prisma = new PrismaClient();
 
-// Seed organization and admin user
-const seedOrganizationAndAdmin = async () => {
-  try {
-    const adminEmail = process.env.ADMIN_EMAIL || "raj@gmail.com";
-    const adminPassword = process.env.ADMIN_PASSWORD || "Test@123";
-    const adminUsername = process.env.ADMIN_USERNAME || "raj";
+// --- Configurable Defaults ---
+const ADMIN = {
+  username: process.env.ADMIN_USERNAME || "raj",
+  email: process.env.ADMIN_EMAIL || "raj@gmail.com",
+  password: process.env.ADMIN_PASSWORD || "Test@123",
+};
 
-    // Check if admin already exists
-    const existingAdmin = await prisma.user.findUnique({
-      where: { username: adminUsername },
-      include: { organization: true },
-    });
+const TEST_USER = {
+  username: "testuser",
+  password: "Test@123",
+};
 
-    if (existingAdmin) {
-      console.log(`👤 Admin user already exists: ${adminUsername}`);
-      return existingAdmin;
-    }
+const MATERIAL_RATES = [
+  { materialType: "M-Sand", ratePerUnit: 22000 },
+  { materialType: "P-Sand", ratePerUnit: 20000 },
+  { materialType: "Blue Metal 0.5in", ratePerUnit: 24000 },
+  { materialType: "Blue Metal 0.75in", ratePerUnit: 25000 },
+  { materialType: "Jally", ratePerUnit: 18000 },
+  { materialType: "Kurunai", ratePerUnit: 16000 },
+  { materialType: "Mixed", ratePerUnit: 20000 },
+];
 
-    // Hash password
-    const saltRounds = 10;
-    const passwordHash = await bcrypt.hash(adminPassword, saltRounds);
+const TRUCK_ENTRIES = [
+  {
+    truckNumber: "KA01AB1234",
+    truckName: "Driver A",
+    entryType: "Sales" as EntryType,
+    materialType: "M-Sand",
+    units: 10,
+    ratePerUnit: 22000,
+    offsetDays: 1,
+    notes: "Sample M-Sand sales entry",
+  },
+  {
+    truckNumber: "KA02CD5678",
+    truckName: "Driver B",
+    entryType: "RawStone" as EntryType,
+    materialType: null,
+    units: 15,
+    ratePerUnit: 18000,
+    offsetDays: 1,
+    notes: "Sample raw stone entry",
+  },
+  {
+    truckNumber: "KA03EF9012",
+    truckName: "Driver C",
+    entryType: "Sales" as EntryType,
+    materialType: "P-Sand",
+    units: 8,
+    ratePerUnit: 20000,
+    offsetDays: 0,
+    notes: "Sample P-Sand sales",
+  },
+  {
+    truckNumber: "KA04GH3456",
+    truckName: "Driver D",
+    entryType: "Sales" as EntryType,
+    materialType: "Blue Metal 0.5in",
+    units: 12,
+    ratePerUnit: 24000,
+    offsetDays: 0,
+    notes: "Sample Blue Metal 0.5in sales",
+  },
+  {
+    truckNumber: "KA05IJ7890",
+    truckName: "Driver E",
+    entryType: "Sales" as EntryType,
+    materialType: "Blue Metal 0.75in",
+    units: 6,
+    ratePerUnit: 25000,
+    offsetDays: 0,
+    notes: "Sample Blue Metal 0.75in sales",
+  },
+  {
+    truckNumber: "KA06KL2345",
+    truckName: "Driver F",
+    entryType: "Sales" as EntryType,
+    materialType: "Jally",
+    units: 15,
+    ratePerUnit: 18000,
+    offsetDays: 2,
+    notes: "Sample Jally sales",
+  },
+  {
+    truckNumber: "KA07MN6789",
+    truckName: "Driver G",
+    entryType: "Sales" as EntryType,
+    materialType: "Kurunai",
+    units: 20,
+    ratePerUnit: 16000,
+    offsetDays: 2,
+    notes: "Sample Kurunai sales",
+  },
+  {
+    truckNumber: "KA08OP0123",
+    truckName: "Driver H",
+    entryType: "Sales" as EntryType,
+    materialType: "Mixed",
+    units: 10,
+    ratePerUnit: 20000,
+    offsetDays: 3,
+    notes: "Sample Mixed materials sales",
+  },
+];
 
-    // Create admin user first (without organization)
-    const adminUser = await prisma.user.create({
+const OTHER_EXPENSES = [
+  {
+    expenseType: "Fuel",
+    amount: 5000.0,
+    description: "Diesel refill",
+    offsetDays: 0,
+  },
+  {
+    expenseType: "Maintenance",
+    amount: 3200.0,
+    description: "Machine service",
+    offsetDays: 1,
+  },
+  {
+    expenseType: "Labor",
+    amount: 2100.0,
+    description: "Daily wages",
+    offsetDays: 2,
+  },
+];
+
+// Helper function to hash password
+async function hashPassword(password: string): Promise<string> {
+  const saltRounds = 10;
+  return await bcrypt.hash(password, saltRounds);
+}
+
+// Clear all data for development
+async function clearData() {
+  console.log("🧹 Clearing existing data...");
+
+  // Delete in proper order to respect foreign key constraints
+  // First delete child records
+  await prisma.otherExpense.deleteMany({});
+  await prisma.truckEntry.deleteMany({});
+  await prisma.materialRate.deleteMany({});
+
+  // Then delete organizations (this will handle the owner relationship properly)
+  await prisma.organization.deleteMany({});
+
+  // Finally delete users
+  await prisma.user.deleteMany({});
+
+  console.log("✅ All data cleared");
+}
+
+async function main() {
+  console.log("🌱 Starting DEV seed...");
+  console.log(
+    `📊 Database: ${process.env.DATABASE_URL?.replace(/\/\/.*@/, "//***:***@")}`
+  );
+
+  // Clear existing data first (for development)
+  await clearData();
+
+  // 1. Create Admin (owner) user first
+  console.log("👤 Creating admin user...");
+  const adminPasswordHash = await hashPassword(ADMIN.password);
+
+  const admin = await prisma.user.create({
+    data: {
+      username: ADMIN.username,
+      passwordHash: adminPasswordHash,
+      role: UserRole.owner,
+      isActive: true,
+    },
+  });
+  console.log(`✅ Created admin user: ${admin.username}`);
+
+  // 2. Create Organization with the admin user as owner
+  console.log("🏢 Creating organization...");
+  const org = await prisma.organization.create({
+    data: {
+      name: "CrusherMate Operations",
+      ownerId: admin.id,
+    },
+  });
+  console.log(`✅ Created organization: ${org.name}`);
+
+  // 3. Update admin user with organization
+  const updatedAdmin = await prisma.user.update({
+    where: { id: admin.id },
+    data: { organizationId: org.id },
+  });
+  console.log("🔗 Linked admin to organization");
+
+  // 4. Create Test User
+  console.log("👥 Creating test user...");
+  const testPasswordHash = await hashPassword(TEST_USER.password);
+
+  const testUser = await prisma.user.create({
+    data: {
+      username: TEST_USER.username,
+      passwordHash: testPasswordHash,
+      role: UserRole.user,
+      organizationId: org.id,
+      isActive: true,
+    },
+  });
+  console.log(`✅ Created test user: ${testUser.username}`);
+
+  // 5. Create Material Rates
+  console.log("💰 Creating material rates...");
+  for (const rate of MATERIAL_RATES) {
+    await prisma.materialRate.create({
       data: {
-        username: adminUsername,
-        passwordHash: passwordHash,
-        role: UserRole.owner,
+        materialType: rate.materialType,
+        ratePerUnit: rate.ratePerUnit,
+        organizationId: org.id,
         isActive: true,
       },
     });
+  }
+  console.log(`✅ Created ${MATERIAL_RATES.length} material rates`);
 
-    console.log(`✅ Admin user created: ${adminUsername}`);
+  // 6. Create Truck Entries
+  console.log("🚛 Creating truck entries...");
+  const now = new Date();
+  for (const t of TRUCK_ENTRIES) {
+    const entryDate = new Date(now.getTime() - t.offsetDays * 86400000);
+    const entryTime = new Date(entryDate);
+    entryTime.setHours(
+      9 + Math.floor(Math.random() * 8),
+      Math.floor(Math.random() * 60)
+    ); // Random time between 9AM-5PM
 
-    // Create organization with the admin user as owner
-    const organization = await prisma.organization.create({
+    await prisma.truckEntry.create({
       data: {
-        name: "CrusherMate Operations",
-        ownerId: adminUser.id,
+        organizationId: org.id,
+        userId: updatedAdmin.id,
+        truckNumber: t.truckNumber,
+        truckName: t.truckName,
+        entryType: t.entryType,
+        materialType: t.materialType,
+        units: t.units,
+        ratePerUnit: t.ratePerUnit,
+        totalAmount: t.units * t.ratePerUnit,
+        entryDate: entryDate,
+        entryTime: entryTime,
+        status: EntryStatus.active,
+        notes: t.notes,
       },
     });
+  }
+  console.log(`✅ Created ${TRUCK_ENTRIES.length} truck entries`);
 
-    console.log(`✅ Organization created: ${organization.name}`);
-
-    // Update admin user with organization
-    const updatedAdminUser = await prisma.user.update({
-      where: { id: adminUser.id },
-      data: { organizationId: organization.id },
+  // 7. Create Other Expenses
+  console.log("� Creating other expenses...");
+  for (const e of OTHER_EXPENSES) {
+    const date = new Date(now.getTime() - e.offsetDays * 86400000);
+    await prisma.otherExpense.create({
+      data: {
+        organizationId: org.id,
+        userId: updatedAdmin.id,
+        expenseType: e.expenseType,
+        amount: e.amount,
+        description: e.description,
+        date,
+        isActive: true,
+      },
     });
-
-    return updatedAdminUser;
-  } catch (error) {
-    console.error("❌ Error creating admin user:", error);
-    throw error;
   }
-};
+  console.log(`✅ Created ${OTHER_EXPENSES.length} other expenses`);
 
-// Seed material rates
-const seedMaterialRates = async (adminUser: any) => {
-  try {
-    const defaultRates = [
-      {
-        materialType: "M-Sand",
-        currentRate: 22000,
-        notes: "Market rate for M-Sand per unit",
-      },
-      {
-        materialType: "P-Sand",
-        currentRate: 20000,
-        notes: "Market rate for P-Sand per unit",
-      },
-      {
-        materialType: "Blue Metal 0.5in",
-        currentRate: 24000,
-        notes: "Market rate for Blue Metal 0.5in per unit",
-      },
-      {
-        materialType: "Blue Metal 0.75in",
-        currentRate: 25000,
-        notes: "Market rate for Blue Metal 0.75in per unit",
-      },
-      {
-        materialType: "Jally",
-        currentRate: 18000,
-        notes: "Market rate for Jally per unit",
-      },
-      {
-        materialType: "Kurunai",
-        currentRate: 16000,
-        notes: "Market rate for Kurunai per unit",
-      },
-      {
-        materialType: "Mixed",
-        currentRate: 20000,
-        notes: "Market rate for Mixed materials per unit",
-      },
-    ];
+  console.log("🎉 DEV seed complete!");
 
-    for (const rate of defaultRates) {
-      const existingRate = await prisma.materialRate.findFirst({
-        where: {
-          materialType: rate.materialType,
-          organizationId: adminUser.organizationId,
-        },
-      });
+  // Display summary
+  console.log("\n📋 Summary:");
+  console.log(
+    `👤 Admin User: ${updatedAdmin.username} (ID: ${updatedAdmin.id})`
+  );
+  console.log(`👥 Test User: ${testUser.username} (ID: ${testUser.id})`);
+  console.log(`🏢 Organization: ${org.name} (ID: ${org.id})`);
 
-      if (!existingRate) {
-        await prisma.materialRate.create({
-          data: {
-            materialType: rate.materialType,
-            ratePerUnit: rate.currentRate,
-            unitType: "Load",
-            organizationId: adminUser.organizationId,
-            isActive: true,
-          },
-        });
-        console.log(
-          `✅ Created rate for ${rate.materialType}: ₹${rate.currentRate}`
-        );
-      } else {
-        console.log(
-          `📝 Rate already exists for ${rate.materialType}: ₹${existingRate.ratePerUnit}`
-        );
-      }
-    }
-  } catch (error) {
-    console.error("❌ Error seeding material rates:", error);
-    throw error;
-  }
-};
+  console.log("\n🔐 Login Credentials:");
+  console.log(`Admin: ${updatedAdmin.username} / ${ADMIN.password}`);
+  console.log(`Test User: ${testUser.username} / ${TEST_USER.password}`);
 
-// Main seeding function
-async function main() {
-  try {
-    console.log("🌱 Starting production database seeding...");
-    console.log(
-      `📊 Database URL: ${process.env.DATABASE_URL?.replace(
-        /\/\/.*@/,
-        "//***:***@"
-      )}`
-    );
+  // Display statistics
+  const totalUsers = await prisma.user.count();
+  const totalOrganizations = await prisma.organization.count();
+  const totalRates = await prisma.materialRate.count();
+  const totalTruckEntries = await prisma.truckEntry.count();
+  const totalExpenses = await prisma.otherExpense.count();
 
-    // Test database connection
-    await prisma.$connect();
-    console.log("✅ Connected to production PostgreSQL database");
-
-    // Seed admin user and organization
-    const adminUser = await seedOrganizationAndAdmin();
-
-    // Seed material rates
-    await seedMaterialRates(adminUser);
-
-    console.log("🎉 Production database seeding completed successfully!");
-    console.log("\n📋 Summary:");
-    console.log(
-      `👤 Admin User: ${adminUser.username} (role: ${adminUser.role})`
-    );
-    console.log(`🏢 Organization ID: ${adminUser.organizationId}`);
-
-    console.log("\n🔐 Login Credentials:");
-    console.log(
-      `Username: ${adminUser.username} / Password: ${
-        process.env.ADMIN_PASSWORD || "Test@123"
-      }`
-    );
-
-    // Display some statistics
-    const totalUsers = await prisma.user.count();
-    const totalOrganizations = await prisma.organization.count();
-    const totalRates = await prisma.materialRate.count();
-
-    console.log("\n📊 Database Statistics:");
-    console.log(`Users: ${totalUsers}`);
-    console.log(`Organizations: ${totalOrganizations}`);
-    console.log(`Material Rates: ${totalRates}`);
-  } catch (error) {
-    console.error("❌ Production database seeding failed:", error);
-    process.exit(1);
-  }
+  console.log("\n📊 Database Statistics:");
+  console.log(`Users: ${totalUsers}`);
+  console.log(`Organizations: ${totalOrganizations}`);
+  console.log(`Material Rates: ${totalRates}`);
+  console.log(`Truck Entries: ${totalTruckEntries}`);
+  console.log(`Other Expenses: ${totalExpenses}`);
 }
 
 main()
-  .then(async () => {
-    await prisma.$disconnect();
-  })
-  .catch(async (e) => {
-    console.error(e);
-    await prisma.$disconnect();
+  .catch((e) => {
+    console.error("❌ Seed failed", e);
     process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
   });
