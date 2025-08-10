@@ -18,7 +18,8 @@ export class AuthController {
 
   register = async (req: Request, res: Response) => {
     try {
-      const { username, password, organizationName, organizationId, role } = req.body;
+      const { username, password, organizationName, organizationId, role } =
+        req.body;
 
       // Validate input
       const usernameValidation = ValidationUtil.validateUsername(username);
@@ -69,7 +70,7 @@ export class AuthController {
         // Regular user creation or owner without new organization
         // If organizationId is provided, use it; otherwise leave as undefined
         finalOrganizationId = organizationId;
-        
+
         user = await this.userService.createUser({
           username,
           passwordHash,
@@ -91,7 +92,9 @@ export class AuthController {
         {
           user: userWithoutPassword,
           organization: finalOrganizationId
-            ? await this.organizationService.getOrganizationById(finalOrganizationId)
+            ? await this.organizationService.getOrganizationById(
+                finalOrganizationId
+              )
             : null,
         },
         "User registered successfully",

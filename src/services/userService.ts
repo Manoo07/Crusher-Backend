@@ -173,7 +173,9 @@ export class UserService {
     if (data.organizationId !== undefined) {
       if (data.organizationId) {
         // If organizationId is provided, verify it exists
-        const organization = await this.organizationDAO.findById(data.organizationId);
+        const organization = await this.organizationDAO.findById(
+          data.organizationId
+        );
         if (!organization) {
           throw new Error("Organization not found");
         }
