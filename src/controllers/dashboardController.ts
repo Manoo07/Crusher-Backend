@@ -3,7 +3,6 @@ import { DashboardService } from "../services/dashboardService";
 import { AuthenticatedRequest } from "../types";
 import { DateFilterType, DateFilterUtil } from "../utils/dateFilters";
 import { ResponseUtil } from "../utils/response";
-import { TimezoneAwareDateFilter } from "../utils/timezoneAwareDateFilter";
 
 export class DashboardController {
   private dashboardService: DashboardService;
@@ -21,50 +20,25 @@ export class DashboardController {
         return ResponseUtil.unauthorized(res, "Authentication required");
       }
 
-      // Handle different date filter types with timezone awareness
+      // Handle different date filter types
       const filterType = (req.query.filterType as string) || "this_week";
       const customStart = req.query.startDate as string;
       const customEnd = req.query.endDate as string;
-      const clientTimezone =
-        (req.query.timezone as string) ||
-        (req.headers["x-timezone"] as string) ||
-        "UTC";
 
-      let startDate: Date | undefined;
-      let endDate: Date | undefined;
-      let dateRangeDescription = "";
+      // Initialize variables
+      let startDate: Date;
+      let endDate: Date;
 
       try {
-        // Validate filter type first
-        const validatedFilterType = DateFilterUtil.validateDateFilter(
-          filterType,
+        // Get date range using existing DateFilterUtil
+        const dateRange = DateFilterUtil.getDateRange(
+          filterType as DateFilterType,
           customStart,
           customEnd
         );
 
-        // Validate custom dates if provided
-        if (filterType === "custom") {
-          TimezoneAwareDateFilter.validateDateString(customStart, "startDate");
-          TimezoneAwareDateFilter.validateDateString(customEnd, "endDate");
-        }
-
-        // Get timezone-aware date range (this returns UTC dates for database queries)
-        const dateRange = TimezoneAwareDateFilter.getDateRange(
-          validatedFilterType,
-          customStart,
-          customEnd,
-          clientTimezone
-        );
-
         startDate = dateRange.startDate;
         endDate = dateRange.endDate;
-
-        // Format date range for client display
-        dateRangeDescription = TimezoneAwareDateFilter.formatDateRangeForClient(
-          validatedFilterType,
-          dateRange,
-          clientTimezone
-        );
       } catch (error: any) {
         return ResponseUtil.error(res, `Invalid date filter: ${error.message}`);
       }
@@ -76,36 +50,17 @@ export class DashboardController {
           endDate
         );
 
-      // Add filter information to response with timezone details
-      const responseData = {
-        ...summary,
-        filterInfo: {
-          filterType,
-          dateRange: dateRangeDescription,
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
-          timezone: clientTimezone,
-          clientStartDate: TimezoneAwareDateFilter.formatDateForClient(
-            startDate,
-            clientTimezone
-          ),
-          clientEndDate: TimezoneAwareDateFilter.formatDateForClient(
-            endDate,
-            clientTimezone
-          ),
-          utcOffset: new Date()
-            .toLocaleString("en-US", {
-              timeZone: clientTimezone,
-              timeZoneName: "short",
-            })
-            .split(" ")
-            .pop(),
-        },
-      };
-
+      // Return the summary
       return ResponseUtil.success(
         res,
-        responseData,
+        {
+          ...summary,
+          filterInfo: {
+            filterType,
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+          },
+        },
         "Comprehensive dashboard summary retrieved successfully"
       );
     } catch (error: any) {

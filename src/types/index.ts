@@ -57,3 +57,20 @@ export interface ExpenseFilters extends PaginationParams {
   userId?: string;
   isActive?: boolean;
 }
+
+// Material type with rate information
+export interface MaterialTypeWithRate {
+  materialType: string;
+  ratePerUnit: number;
+  unitType: string;
+  hasRate: boolean;
+  lastUpdated: Date | null;
+  isCustom?: boolean;
+}
+
+// Response for material types with rates API
+export interface MaterialTypesWithRatesResponse {
+  materialTypes: MaterialTypeWithRate[];
+  totalCount: number;
+  organizationId: string;
+}

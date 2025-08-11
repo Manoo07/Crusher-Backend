@@ -93,10 +93,14 @@ export class TruckEntryController {
         materialType,
         units,
         ratePerUnit,
-        entryDate,
-        entryTime,
         notes,
+        truckImage,
       } = req.body;
+
+      // Auto-generate entry date and time
+      const now = new Date();
+      const entryDate = now;
+      const entryTime = now;
 
       // Validate truck number format
       const truckNumberRegex = /^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}$/;
@@ -131,6 +135,10 @@ export class TruckEntryController {
         );
       }
 
+      // Calculate total amount for response
+      const calculatedTotalAmount =
+        unitsValidation.value! * rateValidation.value!;
+
       const truckEntry = await this.truckEntryService.createTruckEntry({
         organizationId: req.organizationId,
         userId: req.user.id,
@@ -140,16 +148,20 @@ export class TruckEntryController {
         materialType,
         units: unitsValidation.value!,
         ratePerUnit: rateValidation.value!,
-        entryDate: new Date(entryDate),
-        entryTime: entryTime
-          ? new Date(`1970-01-01T${entryTime}:00`)
-          : new Date(),
+        entryDate: entryDate,
+        entryTime: entryTime,
         notes,
+        truckImage,
       });
 
       return ResponseUtil.success(
         res,
-        { truckEntry },
+        {
+          truckEntry: {
+            ...truckEntry,
+            calculatedTotal: calculatedTotalAmount,
+          },
+        },
         "Truck entry created successfully",
         201
       );
@@ -216,6 +228,13 @@ export class TruckEntryController {
         );
       }
 
+      // Auto-update entryTime when record is modified
+      const now = new Date();
+      updateData.entryTime = now;
+
+      // Remove entryDate from updateData if provided - it should not be changed on update
+      delete updateData.entryDate;
+
       const truckEntry = await this.truckEntryService.updateTruckEntry(
         id,
         updateData
@@ -268,6 +287,39 @@ export class TruckEntryController {
     } catch (error: any) {
       console.error("Delete truck entry error:", error);
       return ResponseUtil.badRequest(res, error.message);
+    }
+  };
+
+  // GET /api/truck-entries/entry-types - Get available entry types
+  getEntryTypes = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (!req.user || !req.organizationId) {
+        return ResponseUtil.unauthorized(res, "Authentication required");
+      }
+
+      const entryTypes = [
+        {
+          value: "Sales",
+          label: "Sales",
+          description: "Record truck sales transactions",
+          requiresMaterial: true,
+        },
+        {
+          value: "RawStone",
+          label: "Raw Stone",
+          description: "Record raw stone purchases",
+          requiresMaterial: false,
+        },
+      ];
+
+      return ResponseUtil.success(
+        res,
+        { entryTypes },
+        "Entry types retrieved successfully"
+      );
+    } catch (error: any) {
+      console.error("Get entry types error:", error);
+      return ResponseUtil.error(res, error.message);
     }
   };
 }

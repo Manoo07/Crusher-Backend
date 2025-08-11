@@ -26,6 +26,12 @@ router.get(
   ErrorMiddleware.asyncHandler(truckEntryController.getTruckEntriesSummary)
 );
 
+// Get available entry types
+router.get(
+  "/entry-types",
+  ErrorMiddleware.asyncHandler(truckEntryController.getEntryTypes)
+);
+
 // Create truck entry
 router.post(
   "/",
@@ -35,7 +41,6 @@ router.post(
     "entryType",
     "units",
     "ratePerUnit",
-    "entryDate",
   ]),
   ErrorMiddleware.asyncHandler(truckEntryController.createTruckEntry)
 );

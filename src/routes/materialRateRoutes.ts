@@ -18,9 +18,15 @@ router.get(
 );
 
 // Get standard material types
+// router.get(
+//   "/types",
+//   ErrorMiddleware.asyncHandler(materialRateController.getMaterialTypes)
+// );
+
+// Get material types with rates for Sales truck entries
 router.get(
   "/types",
-  ErrorMiddleware.asyncHandler(materialRateController.getMaterialTypes)
+  ErrorMiddleware.asyncHandler(materialRateController.getMaterialTypesWithRates)
 );
 
 // Create or update material rate (owner only)
