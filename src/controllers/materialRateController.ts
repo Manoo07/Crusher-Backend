@@ -120,6 +120,146 @@ export class MaterialRateController {
     }
   };
 
+  // NEW: GET /api/material-rates/:id - Get individual material rate
+  getMaterialRateById = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (!req.user || !req.organizationId) {
+        return ResponseUtil.unauthorized(res, "Authentication required");
+      }
+
+      const { id } = req.params;
+
+      const materialRate = await this.materialRateService.getMaterialRateById(
+        id
+      );
+
+      if (!materialRate) {
+        return ResponseUtil.notFound(res, "Material rate not found");
+      }
+
+      // Ensure the material rate belongs to the user's organization
+      if (materialRate.organizationId !== req.organizationId) {
+        return ResponseUtil.forbidden(res, "Access denied");
+      }
+
+      return ResponseUtil.success(
+        res,
+        materialRate,
+        "Material rate retrieved successfully"
+      );
+    } catch (error: any) {
+      console.error("Get material rate by ID error:", error);
+      return ResponseUtil.error(res, error.message);
+    }
+  };
+
+  // NEW: PUT /api/material-rates/:id - Update individual material rate
+  updateMaterialRateById = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (!req.user || !req.organizationId) {
+        return ResponseUtil.unauthorized(res, "Authentication required");
+      }
+
+      const { id } = req.params;
+      const { materialType, ratePerUnit, unitType, isActive } = req.body;
+
+      // Check if material rate exists and belongs to organization
+      const existingRate = await this.materialRateService.getMaterialRateById(
+        id
+      );
+
+      if (!existingRate) {
+        return ResponseUtil.notFound(res, "Material rate not found");
+      }
+
+      if (existingRate.organizationId !== req.organizationId) {
+        return ResponseUtil.forbidden(res, "Access denied");
+      }
+
+      // Validate rate if provided
+      if (ratePerUnit !== undefined) {
+        const numericRate = Number(ratePerUnit);
+        if (isNaN(numericRate) || numericRate <= 0) {
+          return ResponseUtil.badRequest(
+            res,
+            "Rate must be a valid number greater than 0"
+          );
+        }
+      }
+
+      // Build update data
+      const updateData: any = {};
+      if (materialType !== undefined) updateData.materialType = materialType;
+      if (ratePerUnit !== undefined)
+        updateData.ratePerUnit = Number(ratePerUnit);
+      if (unitType !== undefined) updateData.unitType = unitType;
+      if (isActive !== undefined) updateData.isActive = isActive;
+
+      if (Object.keys(updateData).length === 0) {
+        return ResponseUtil.badRequest(
+          res,
+          "No valid fields provided for update"
+        );
+      }
+
+      const updatedRate = await this.materialRateService.updateMaterialRateById(
+        id,
+        updateData
+      );
+
+      return ResponseUtil.success(
+        res,
+        updatedRate,
+        "Material rate updated successfully"
+      );
+    } catch (error: any) {
+      console.error("Update material rate by ID error:", error);
+      return ResponseUtil.error(res, error.message);
+    }
+  };
+
+  // NEW: DELETE /api/material-rates/:id - Delete individual material rate
+  deleteMaterialRateById = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (!req.user || !req.organizationId) {
+        return ResponseUtil.unauthorized(res, "Authentication required");
+      }
+
+      const { id } = req.params;
+
+      // Check if material rate exists and belongs to organization
+      const existingRate = await this.materialRateService.getMaterialRateById(
+        id
+      );
+
+      if (!existingRate) {
+        return ResponseUtil.notFound(res, "Material rate not found");
+      }
+
+      if (existingRate.organizationId !== req.organizationId) {
+        return ResponseUtil.forbidden(res, "Access denied");
+      }
+
+      // Check if this material rate is being used in any truck entries or bridge table
+      // For now, we'll do a soft delete by setting isActive to false
+      const deletedRate = await this.materialRateService.updateMaterialRateById(
+        id,
+        {
+          isActive: false,
+        }
+      );
+
+      return ResponseUtil.success(
+        res,
+        deletedRate,
+        "Material rate deleted successfully"
+      );
+    } catch (error: any) {
+      console.error("Delete material rate by ID error:", error);
+      return ResponseUtil.error(res, error.message);
+    }
+  };
+
   // GET /api/material-types
   getMaterialTypes = async (req: AuthenticatedRequest, res: Response) => {
     try {

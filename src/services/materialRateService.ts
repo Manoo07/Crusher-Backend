@@ -72,6 +72,22 @@ export class MaterialRateService {
     );
   }
 
+  async getMaterialRateById(id: string): Promise<MaterialRate | null> {
+    if (!id) {
+      throw new Error("Material rate ID is required");
+    }
+
+    return await this.materialRateDAO.findById(id);
+  }
+
+  async updateMaterialRateById(id: string, data: any): Promise<MaterialRate> {
+    if (!id) {
+      throw new Error("Material rate ID is required");
+    }
+
+    return await this.materialRateDAO.update(id, data);
+  }
+
   async deactivateMaterialRate(id: string): Promise<MaterialRate> {
     if (!id) {
       throw new Error("Material rate ID is required");

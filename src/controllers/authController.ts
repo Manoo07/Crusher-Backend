@@ -243,4 +243,164 @@ export class AuthController {
       return ResponseUtil.error(res, error.message);
     }
   };
+
+  updateProfile = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (!req.user) {
+        return ResponseUtil.unauthorized(res, "Authentication required");
+      }
+
+      const { username, currentPassword, newPassword } = req.body;
+      const userId = req.user.id;
+
+      // Get current user data
+      const currentUser = await this.userService.getUserById(userId);
+      if (!currentUser) {
+        return ResponseUtil.notFound(res, "User not found");
+      }
+
+      const updateData: any = {};
+
+      // If username is being updated, validate it
+      if (username && username !== currentUser.username) {
+        const usernameValidation = ValidationUtil.validateUsername(username);
+        if (!usernameValidation.isValid) {
+          return ResponseUtil.badRequest(res, usernameValidation.message);
+        }
+
+        // Check if new username already exists
+        const existingUser = await this.userService.getUserByUsername(username);
+        if (existingUser && existingUser.id !== userId) {
+          return ResponseUtil.badRequest(res, "Username already exists");
+        }
+
+        updateData.username = username;
+      }
+
+      // If password is being updated
+      if (newPassword) {
+        if (!currentPassword) {
+          return ResponseUtil.badRequest(
+            res,
+            "Current password is required to update password"
+          );
+        }
+
+        // Verify current password
+        const isValidCurrentPassword = await bcrypt.compare(
+          currentPassword,
+          currentUser.passwordHash
+        );
+        if (!isValidCurrentPassword) {
+          return ResponseUtil.badRequest(res, "Current password is incorrect");
+        }
+
+        // Validate new password
+        const passwordValidation = ValidationUtil.validatePassword(newPassword);
+        if (!passwordValidation.isValid) {
+          return ResponseUtil.badRequest(res, passwordValidation.message);
+        }
+
+        // Hash new password
+        const saltRounds = 10;
+        updateData.passwordHash = await bcrypt.hash(newPassword, saltRounds);
+      }
+
+      // Update user if there are changes
+      if (Object.keys(updateData).length === 0) {
+        return ResponseUtil.badRequest(
+          res,
+          "No valid fields provided for update"
+        );
+      }
+
+      const updatedUser = await this.userService.updateUser(userId, updateData);
+
+      // Get user's organization
+      const organization = updatedUser.organizationId
+        ? await this.organizationService.getOrganizationById(
+            updatedUser.organizationId
+          )
+        : updatedUser.role === "owner"
+        ? await this.organizationService.getOrganizationByOwnerId(
+            updatedUser.id
+          )
+        : null;
+
+      // Remove password from response
+      const { passwordHash: _, ...userWithoutPassword } = updatedUser;
+
+      return ResponseUtil.success(
+        res,
+        {
+          ...userWithoutPassword,
+          organizationId: updatedUser.organizationId || organization?.id,
+          organization,
+        },
+        "Profile updated successfully"
+      );
+    } catch (error: any) {
+      console.error("Update profile error:", error);
+      return ResponseUtil.error(res, error.message);
+    }
+  };
+
+  deleteProfile = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (!req.user) {
+        return ResponseUtil.unauthorized(res, "Authentication required");
+      }
+
+      const { password } = req.body;
+      const userId = req.user.id;
+
+      // Get current user data
+      const currentUser = await this.userService.getUserById(userId);
+      if (!currentUser) {
+        return ResponseUtil.notFound(res, "User not found");
+      }
+
+      // Verify password before deletion
+      if (!password) {
+        return ResponseUtil.badRequest(
+          res,
+          "Password is required to delete account"
+        );
+      }
+
+      const isValidPassword = await bcrypt.compare(
+        password,
+        currentUser.passwordHash
+      );
+      if (!isValidPassword) {
+        return ResponseUtil.badRequest(res, "Invalid password");
+      }
+
+      // Check if user is an organization owner
+      if (currentUser.role === "owner") {
+        // Check if there are other users in the organization
+        const organization =
+          await this.organizationService.getOrganizationByOwnerId(userId);
+        if (organization) {
+          // For now, prevent deletion if user owns an organization
+          // In a real app, you might want to transfer ownership or delete the organization
+          return ResponseUtil.badRequest(
+            res,
+            "Cannot delete account while owning an organization. Please contact support."
+          );
+        }
+      }
+
+      // Soft delete user (deactivate instead of hard delete to maintain data integrity)
+      await this.userService.updateUser(userId, {
+        isActive: false,
+        username: `deleted_${userId}_${Date.now()}`, // Prevent username conflicts
+      });
+
+      return ResponseUtil.success(res, null, "Account deleted successfully");
+    } catch (error: any) {
+      console.error("Delete profile error:", error);
+      return ResponseUtil.error(res, error.message);
+    }
+  };
 }

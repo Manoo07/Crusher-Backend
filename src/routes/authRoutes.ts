@@ -39,4 +39,17 @@ router.get(
   ErrorMiddleware.asyncHandler(authController.getProfile)
 );
 
+router.put(
+  "/profile",
+  AuthMiddleware.authenticate,
+  ErrorMiddleware.asyncHandler(authController.updateProfile)
+);
+
+router.delete(
+  "/profile",
+  AuthMiddleware.authenticate,
+  ValidationMiddleware.validateRequired(["password"]),
+  ErrorMiddleware.asyncHandler(authController.deleteProfile)
+);
+
 export { router as authRoutes };

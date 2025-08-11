@@ -17,6 +17,12 @@ router.get(
   ErrorMiddleware.asyncHandler(materialRateController.getMaterialRates)
 );
 
+// Get individual material rate
+router.get(
+  "/:id",
+  ErrorMiddleware.asyncHandler(materialRateController.getMaterialRateById)
+);
+
 // Get standard material types
 // router.get(
 //   "/types",
@@ -49,6 +55,20 @@ router.post(
   ValidationMiddleware.validateRequired(["materialType", "rate"]),
   AuthMiddleware.requireOwner(),
   ErrorMiddleware.asyncHandler(materialRateController.updateMaterialRate)
+);
+
+// Update individual material rate (owner only)
+router.put(
+  "/:id",
+  AuthMiddleware.requireOwner(),
+  ErrorMiddleware.asyncHandler(materialRateController.updateMaterialRateById)
+);
+
+// Delete individual material rate (owner only)
+router.delete(
+  "/:id",
+  AuthMiddleware.requireOwner(),
+  ErrorMiddleware.asyncHandler(materialRateController.deleteMaterialRateById)
 );
 
 export { router as materialRateRoutes };
