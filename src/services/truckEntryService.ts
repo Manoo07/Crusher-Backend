@@ -19,7 +19,8 @@ export class TruckEntryService {
     truckNumber: string;
     truckName: string;
     entryType: "Sales" | "RawStone";
-    materialType?: string;
+    materialType?: string; // Legacy field
+    entryTypeMaterialId?: string; // New bridge table field
     units: number;
     ratePerUnit: number;
     entryDate: Date;
@@ -41,7 +42,7 @@ export class TruckEntryService {
       truckNumber: data.truckNumber,
       truckName: data.truckName,
       entryType: data.entryType as any,
-      materialType: data.materialType,
+      materialType: data.materialType, // Keep for backward compatibility
       units: Number(data.units),
       ratePerUnit: Number(data.ratePerUnit),
       totalAmount,
@@ -51,6 +52,13 @@ export class TruckEntryService {
       truckImage: data.truckImage,
       status: "active",
     };
+
+    // Add bridge table connection if provided
+    if (data.entryTypeMaterialId) {
+      createData.entryTypeMaterial = {
+        connect: { id: data.entryTypeMaterialId },
+      };
+    }
 
     return await this.truckEntryDAO.create(createData);
   }

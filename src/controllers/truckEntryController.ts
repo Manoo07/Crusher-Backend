@@ -1,4 +1,5 @@
 import { Response } from "express";
+import { EntryTypeMaterialService } from "../services/entryTypeMaterialService";
 import { TruckEntryService } from "../services/truckEntryService";
 import { AuthenticatedRequest, TruckEntryFilters } from "../types";
 import { ResponseUtil } from "../utils/response";
@@ -6,9 +7,11 @@ import { ValidationUtil } from "../utils/validation";
 
 export class TruckEntryController {
   private truckEntryService: TruckEntryService;
+  private entryTypeMaterialService: EntryTypeMaterialService;
 
   constructor() {
     this.truckEntryService = new TruckEntryService();
+    this.entryTypeMaterialService = new EntryTypeMaterialService();
   }
 
   getTruckEntries = async (req: AuthenticatedRequest, res: Response) => {
@@ -90,12 +93,13 @@ export class TruckEntryController {
         truckNumber,
         truckName,
         entryType,
-        materialType,
+        materialType, // Legacy field for backward compatibility
+        entryTypeMaterialId, // New field using bridge table
         units,
         ratePerUnit,
         notes,
         truckImage,
-      } = req.body;
+      }: any = req.body;
 
       // Auto-generate entry date and time
       const now = new Date();
@@ -127,12 +131,44 @@ export class TruckEntryController {
         return ResponseUtil.badRequest(res, rateValidation.message);
       }
 
-      // Validate material type for Sales entries
-      if (entryType === "Sales" && !materialType) {
-        return ResponseUtil.badRequest(
-          res,
-          "Material type is required for Sales entries"
-        );
+      // Material validation for Sales entries
+      if (entryType === "Sales") {
+        // Check if using new bridge table approach or legacy approach
+        if (!entryTypeMaterialId && !materialType) {
+          return ResponseUtil.badRequest(
+            res,
+            "Either entryTypeMaterialId or materialType is required for Sales entries"
+          );
+        }
+
+        // If using bridge table, validate the entry type material mapping
+        if (entryTypeMaterialId) {
+          const entryTypeMaterial =
+            await this.entryTypeMaterialService.getEntryTypeMaterialById(
+              entryTypeMaterialId
+            );
+          if (!entryTypeMaterial) {
+            return ResponseUtil.badRequest(
+              res,
+              "Invalid entry type material mapping"
+            );
+          }
+
+          // Verify it belongs to the organization and matches the entry type
+          if (entryTypeMaterial.organizationId !== req.organizationId) {
+            return ResponseUtil.forbidden(
+              res,
+              "Material mapping not found for your organization"
+            );
+          }
+
+          if (entryTypeMaterial.entryType !== entryType) {
+            return ResponseUtil.badRequest(
+              res,
+              "Material mapping does not match the entry type"
+            );
+          }
+        }
       }
 
       // Calculate total amount for response
@@ -145,7 +181,8 @@ export class TruckEntryController {
         truckNumber,
         truckName,
         entryType,
-        materialType,
+        materialType, // Keep for backward compatibility
+        entryTypeMaterialId, // New field for bridge table
         units: unitsValidation.value!,
         ratePerUnit: rateValidation.value!,
         entryDate: entryDate,

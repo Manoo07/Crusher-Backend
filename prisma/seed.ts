@@ -26,6 +26,7 @@ const TEST_USER = {
   password: "Test@123",
 };
 
+// Material Rates for Entry Type Sales
 const MATERIAL_RATES = [
   { materialType: '1 1/2" Metal', ratePerUnit: 25000 },
   { materialType: '3/4" jalli', ratePerUnit: 18000 },
@@ -35,6 +36,11 @@ const MATERIAL_RATES = [
   { materialType: "Wetmix", ratePerUnit: 19000 },
   { materialType: "Msand", ratePerUnit: 22000 },
   { materialType: "Psand", ratePerUnit: 20000 },
+];
+
+// Material Rates for Entry Type RawStone
+const RAWSTONE_MATERIAL_RATES = [
+  { materialType: "RawStone", ratePerUnit: 20000 },
 ];
 
 const TRUCK_ENTRIES = [
@@ -155,6 +161,7 @@ async function clearData() {
   // First delete child records
   await prisma.otherExpense.deleteMany({});
   await prisma.truckEntry.deleteMany({});
+  await prisma.entryTypeMaterial.deleteMany({}); // Clear bridge table
   await prisma.materialRate.deleteMany({});
 
   // Then delete organizations (this will handle the owner relationship properly)
@@ -223,8 +230,11 @@ async function main() {
 
   // 5. Create Material Rates
   console.log("💰 Creating material rates...");
+
+  // Create Sales material rates
+  const salesMaterialRates: any[] = [];
   for (const rate of MATERIAL_RATES) {
-    await prisma.materialRate.create({
+    const materialRate = await prisma.materialRate.create({
       data: {
         materialType: rate.materialType,
         ratePerUnit: rate.ratePerUnit,
@@ -232,10 +242,61 @@ async function main() {
         isActive: true,
       },
     });
+    salesMaterialRates.push(materialRate);
   }
-  console.log(`✅ Created ${MATERIAL_RATES.length} material rates`);
 
-  // 6. Create Truck Entries
+  // Create RawStone material rates
+  const rawStoneMaterialRates: any[] = [];
+  for (const rate of RAWSTONE_MATERIAL_RATES) {
+    const materialRate = await prisma.materialRate.create({
+      data: {
+        materialType: rate.materialType,
+        ratePerUnit: rate.ratePerUnit,
+        organizationId: org.id,
+        isActive: true,
+      },
+    });
+    rawStoneMaterialRates.push(materialRate);
+  }
+
+  console.log(
+    `✅ Created ${
+      MATERIAL_RATES.length + RAWSTONE_MATERIAL_RATES.length
+    } material rates`
+  );
+
+  // 6. Create Entry Type Material Bridge Table
+  console.log("🔗 Creating entry type material mappings...");
+
+  // Map Sales entry type to all Sales materials
+  for (const materialRate of salesMaterialRates) {
+    await prisma.entryTypeMaterial.create({
+      data: {
+        organizationId: org.id,
+        entryType: "Sales",
+        materialRateId: materialRate.id,
+      },
+    });
+  }
+
+  // Map RawStone entry type to RawStone materials
+  for (const materialRate of rawStoneMaterialRates) {
+    await prisma.entryTypeMaterial.create({
+      data: {
+        organizationId: org.id,
+        entryType: "RawStone",
+        materialRateId: materialRate.id,
+      },
+    });
+  }
+
+  console.log(
+    `✅ Created ${
+      salesMaterialRates.length + rawStoneMaterialRates.length
+    } entry type material mappings`
+  );
+
+  // 7. Create Truck Entries
   console.log("🚛 Creating truck entries...");
   const now = new Date();
   for (const t of TRUCK_ENTRIES) {
@@ -266,17 +327,17 @@ async function main() {
   }
   console.log(`✅ Created ${TRUCK_ENTRIES.length} truck entries`);
 
-  // 7. Create Other Expenses
-  console.log("� Creating other expenses...");
+  // 8. Create Other Expenses
+  console.log("💸 Creating other expenses...");
   for (const e of OTHER_EXPENSES) {
     const date = new Date(now.getTime() - e.offsetDays * 86400000);
     await prisma.otherExpense.create({
       data: {
         organizationId: org.id,
         userId: updatedAdmin.id,
-        expenseType: e.expenseType,
+        expensesName: e.expenseType, // Use expensesName instead of expenseType
         amount: e.amount,
-        description: e.description,
+        others: e.description, // Use others instead of description
         date,
         isActive: true,
       },
@@ -302,6 +363,7 @@ async function main() {
   const totalUsers = await prisma.user.count();
   const totalOrganizations = await prisma.organization.count();
   const totalRates = await prisma.materialRate.count();
+  const totalEntryTypeMaterials = await prisma.entryTypeMaterial.count();
   const totalTruckEntries = await prisma.truckEntry.count();
   const totalExpenses = await prisma.otherExpense.count();
 
@@ -309,6 +371,7 @@ async function main() {
   console.log(`Users: ${totalUsers}`);
   console.log(`Organizations: ${totalOrganizations}`);
   console.log(`Material Rates: ${totalRates}`);
+  console.log(`Entry Type Materials: ${totalEntryTypeMaterials}`);
   console.log(`Truck Entries: ${totalTruckEntries}`);
   console.log(`Other Expenses: ${totalExpenses}`);
 }

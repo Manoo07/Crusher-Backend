@@ -8,16 +8,17 @@ datasource db {
 }
 
 model Organization {
-  id            String         @id @default(uuid())
-  name          String         @unique @db.VarChar(100)
-  ownerId       String         @unique @map("owner_id")
-  createdAt     DateTime       @default(now()) @map("created_at")
-  updatedAt     DateTime       @updatedAt @map("updated_at")
-  materialRates MaterialRate[]
-  owner         User           @relation("OrganizationOwner", fields: [ownerId], references: [id])
-  otherExpenses OtherExpense[]
-  truckEntries  TruckEntry[]
-  users         User[]         @relation("OrganizationMembers")
+  id                 String              @id @default(uuid())
+  name               String              @unique @db.VarChar(100)
+  ownerId            String              @unique @map("owner_id")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  materialRates      MaterialRate[]
+  entryTypeMaterials EntryTypeMaterial[]
+  owner              User                @relation("OrganizationOwner", fields: [ownerId], references: [id])
+  otherExpenses      OtherExpense[]
+  truckEntries       TruckEntry[]
+  users              User[]              @relation("OrganizationMembers")
 
   @@index([ownerId])
   @@map("organizations")
@@ -48,15 +49,16 @@ model User {
 }
 
 model MaterialRate {
-  id             String       @id @default(uuid())
-  organizationId String       @map("organization_id")
-  materialType   String       @map("material_type") @db.VarChar(50)
-  ratePerUnit    Decimal      @map("rate_per_unit") @db.Decimal(10, 2)
-  unitType       String       @default("Load") @map("unit_type") @db.VarChar(20)
-  isActive       Boolean      @default(true) @map("is_active")
-  createdAt      DateTime     @default(now()) @map("created_at")
-  updatedAt      DateTime     @updatedAt @map("updated_at")
-  organization   Organization @relation(fields: [organizationId], references: [id])
+  id                 String              @id @default(uuid())
+  organizationId     String              @map("organization_id")
+  materialType       String              @map("material_type") @db.VarChar(50)
+  ratePerUnit        Decimal             @map("rate_per_unit") @db.Decimal(10, 2)
+  unitType           String              @default("Load") @map("unit_type") @db.VarChar(20)
+  isActive           Boolean             @default(true) @map("is_active")
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  organization       Organization        @relation(fields: [organizationId], references: [id])
+  entryTypeMaterials EntryTypeMaterial[]
 
   @@unique([organizationId, materialType])
   @@index([organizationId])
@@ -65,31 +67,54 @@ model MaterialRate {
   @@map("material_rates")
 }
 
-model TruckEntry {
+model EntryTypeMaterial {
   id             String       @id @default(uuid())
   organizationId String       @map("organization_id")
-  userId         String       @map("user_id")
-  truckNumber    String       @map("truck_number") @db.VarChar(20)
-  truckName      String       @map("truck_name") @db.VarChar(50)
   entryType      EntryType    @map("entry_type")
-  materialType   String?      @map("material_type") @db.VarChar(50)
-  units          Decimal      @db.Decimal(5, 2)
-  ratePerUnit    Decimal      @map("rate_per_unit") @db.Decimal(10, 2)
-  totalAmount    Decimal      @map("total_amount") @db.Decimal(12, 2)
-  truckImage     String?      @map("truck_image")
-  entryDate      DateTime     @map("entry_date") @db.Date
-  entryTime      DateTime     @map("entry_time") @db.Time(6)
-  status         EntryStatus  @default(active)
-  notes          String?
+  materialRateId String       @map("material_rate_id")
+  isActive       Boolean      @default(true) @map("is_active")
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @updatedAt @map("updated_at")
   organization   Organization @relation(fields: [organizationId], references: [id])
-  user           User         @relation(fields: [userId], references: [id])
+  materialRate   MaterialRate @relation(fields: [materialRateId], references: [id])
+  truckEntries   TruckEntry[]
+
+  @@unique([organizationId, entryType, materialRateId])
+  @@index([organizationId])
+  @@index([entryType])
+  @@index([materialRateId])
+  @@index([isActive])
+  @@map("entry_type_materials")
+}
+
+model TruckEntry {
+  id                   String             @id @default(uuid())
+  organizationId       String             @map("organization_id")
+  userId               String             @map("user_id")
+  truckNumber          String             @map("truck_number") @db.VarChar(20)
+  truckName            String             @map("truck_name") @db.VarChar(50)
+  entryType            EntryType          @map("entry_type")
+  materialType         String?            @map("material_type") @db.VarChar(50)
+  entryTypeMaterialId  String?            @map("entry_type_material_id") // Reference to bridge table
+  units                Decimal            @db.Decimal(5, 2)
+  ratePerUnit          Decimal            @map("rate_per_unit") @db.Decimal(10, 2)
+  totalAmount          Decimal            @map("total_amount") @db.Decimal(12, 2)
+  truckImage           String?            @map("truck_image")
+  entryDate            DateTime           @map("entry_date") @db.Date
+  entryTime            DateTime           @map("entry_time") @db.Time(6)
+  status               EntryStatus        @default(active)
+  notes                String?
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+  organization         Organization       @relation(fields: [organizationId], references: [id])
+  user                 User               @relation(fields: [userId], references: [id])
+  entryTypeMaterial    EntryTypeMaterial? @relation(fields: [entryTypeMaterialId], references: [id])
 
   @@index([organizationId])
   @@index([userId])
   @@index([entryType])
   @@index([materialType])
+  @@index([entryTypeMaterialId])
   @@index([truckNumber])
   @@index([entryDate])
   @@index([status])

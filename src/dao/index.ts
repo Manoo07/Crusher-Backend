@@ -1,3 +1,4 @@
+export * from "./entryTypeMaterialDAO";
 export * from "./materialRateDAO";
 export * from "./organizationDAO";
 export * from "./otherExpenseDAO";

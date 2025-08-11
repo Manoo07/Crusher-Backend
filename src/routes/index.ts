@@ -5,6 +5,7 @@ import { ErrorMiddleware } from "../middlewares/error";
 import { authRoutes } from "./authRoutes";
 import { configRoutes } from "./configRoutes";
 import { dashboardRoutes } from "./dashboardRoutes";
+import { entryTypeMaterialRoutes } from "./entryTypeMaterialRoutes";
 import { expenseRoutes } from "./expenseRoutes";
 import { materialRateRoutes } from "./materialRateRoutes";
 import { organizationRoutes } from "./organizationRoutes";
@@ -37,6 +38,7 @@ router.get(
 router.use("/auth", authRoutes);
 router.use("/config", configRoutes);
 router.use("/dashboard", dashboardRoutes);
+router.use("/entry-type-materials", entryTypeMaterialRoutes);
 router.use("/expenses", expenseRoutes);
 router.use("/material-rates", materialRateRoutes);
 router.use("/organizations", organizationRoutes);

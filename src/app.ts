@@ -27,9 +27,7 @@ const corsOptions = {
     }
 
     // In production, check against allowed origins
-    const allowedOrigins = process.env.CORS_ORIGIN?.split(",") || [
-      "http://localhost:3000",
-    ];
+    const allowedOrigins = process.env.CORS_ORIGIN?.split(",") || ["*"];
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
@@ -53,7 +51,7 @@ const corsOptions = {
     "Access-Control-Request-Headers",
   ],
   exposedHeaders: ["X-Total-Count", "X-Page-Count"],
-  optionsSuccessStatus: 200, // Some legacy browsers choke on 204
+  optionsSuccessStatus: 200,
   preflightContinue: false,
 };
 

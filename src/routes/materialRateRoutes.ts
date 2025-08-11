@@ -11,7 +11,7 @@ const materialRateController = new MaterialRateController();
 router.use(AuthMiddleware.authenticate);
 router.use(AuthMiddleware.requireActiveUser());
 
-// Get material rates
+// Get material rates (supports ?entryType=Sales or ?entryType=RawStone filter)
 router.get(
   "/",
   ErrorMiddleware.asyncHandler(materialRateController.getMaterialRates)
@@ -23,10 +23,24 @@ router.get(
 //   ErrorMiddleware.asyncHandler(materialRateController.getMaterialTypes)
 // );
 
-// Get material types with rates for Sales truck entries
+// Get material types with rates for Sales truck entries (backward compatibility)
 router.get(
   "/types",
   ErrorMiddleware.asyncHandler(materialRateController.getMaterialTypesWithRates)
+);
+
+// NEW: Get materials for specific entry type using bridge table
+router.get(
+  "/by-entry-type/:entryType",
+  ErrorMiddleware.asyncHandler(materialRateController.getMaterialsByEntryType)
+);
+
+// NEW: Get available materials that can be linked to an entry type
+router.get(
+  "/available-for-entry-type/:entryType",
+  ErrorMiddleware.asyncHandler(
+    materialRateController.getAvailableMaterialsForEntryType
+  )
 );
 
 // Create or update material rate (owner only)

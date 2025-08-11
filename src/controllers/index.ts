@@ -1,6 +1,7 @@
 export * from "./authController";
 export * from "./configController";
 export * from "./dashboardController";
+export * from "./entryTypeMaterialController";
 export * from "./materialRateController";
 export * from "./organizationController";
 export * from "./otherExpenseController";

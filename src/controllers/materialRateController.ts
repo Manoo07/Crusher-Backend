@@ -1,4 +1,6 @@
+import { EntryType } from "@prisma/client";
 import { Response } from "express";
+import { EntryTypeMaterialService } from "../services/entryTypeMaterialService";
 import { MaterialRateService } from "../services/materialRateService";
 import {
   AuthenticatedRequest,
@@ -9,9 +11,11 @@ import { ResponseUtil } from "../utils/response";
 
 export class MaterialRateController {
   private materialRateService: MaterialRateService;
+  private entryTypeMaterialService: EntryTypeMaterialService;
 
   constructor() {
     this.materialRateService = new MaterialRateService();
+    this.entryTypeMaterialService = new EntryTypeMaterialService();
   }
 
   getMaterialRates = async (req: AuthenticatedRequest, res: Response) => {
@@ -20,6 +24,48 @@ export class MaterialRateController {
         return ResponseUtil.unauthorized(res, "Authentication required");
       }
 
+      const { entryType } = req.query;
+
+      // If entryType filter is provided, use the bridge table to get filtered results
+      if (entryType) {
+        // Validate entry type
+        if (!Object.values(EntryType).includes(entryType as EntryType)) {
+          return ResponseUtil.badRequest(
+            res,
+            "Invalid entry type. Use 'Sales' or 'RawStone'"
+          );
+        }
+
+        // Get materials linked to this entry type through the bridge table
+        const entryTypeMaterials =
+          await this.entryTypeMaterialService.getEntryTypeMaterialsByEntryType(
+            req.organizationId,
+            entryType as EntryType
+          );
+
+        // Transform data to match the expected material rates format
+        const filteredRates = entryTypeMaterials.map((etm) => ({
+          id: etm.materialRate.id,
+          organizationId: etm.materialRate.organizationId,
+          materialType: etm.materialRate.materialType,
+          ratePerUnit: etm.materialRate.ratePerUnit,
+          unitType: etm.materialRate.unitType,
+          isActive: etm.materialRate.isActive,
+          createdAt: etm.materialRate.createdAt,
+          updatedAt: etm.materialRate.updatedAt,
+          // Additional bridge table info
+          entryTypeMaterialId: etm.id,
+          entryType: etm.entryType,
+        }));
+
+        return ResponseUtil.success(
+          res,
+          filteredRates,
+          `Material rates for ${entryType} retrieved successfully`
+        );
+      }
+
+      // Default behavior: get all material rates for the organization
       const rates =
         await this.materialRateService.getMaterialRatesByOrganization(
           req.organizationId
@@ -104,7 +150,7 @@ export class MaterialRateController {
     }
   };
 
-  // GET /api/material-rates/sales - Get material types with rates for Sales truck entries
+  // GET /api/material-rates/sales - Get material types with rates for Sales truck entries (backward compatibility)
   getMaterialTypesWithRates = async (
     req: AuthenticatedRequest,
     res: Response
@@ -186,6 +232,120 @@ export class MaterialRateController {
       );
     } catch (error: any) {
       console.error("Get material types with rates error:", error);
+      return ResponseUtil.error(res, error.message);
+    }
+  };
+
+  // NEW: GET /api/material-rates/by-entry-type/:entryType - Get materials for specific entry type using bridge table
+  getMaterialsByEntryType = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ) => {
+    try {
+      if (!req.user || !req.organizationId) {
+        return ResponseUtil.unauthorized(res, "Authentication required");
+      }
+
+      const { entryType } = req.params;
+
+      // Validate entry type
+      if (!Object.values(EntryType).includes(entryType as EntryType)) {
+        return ResponseUtil.badRequest(res, "Invalid entry type");
+      }
+
+      // Get materials linked to this entry type through the bridge table
+      const entryTypeMaterials =
+        await this.entryTypeMaterialService.getEntryTypeMaterialsByEntryType(
+          req.organizationId,
+          entryType as EntryType
+        );
+
+      // Transform data to include material details with rates
+      const materialsWithRates = entryTypeMaterials.map((etm) => ({
+        id: etm.id,
+        materialType: etm.materialRate.materialType,
+        ratePerUnit: Number(etm.materialRate.ratePerUnit),
+        unitType: etm.materialRate.unitType,
+        isActive: etm.materialRate.isActive,
+        materialRateId: etm.materialRate.id,
+        entryTypeMaterialId: etm.id,
+        lastUpdated: etm.materialRate.updatedAt,
+      }));
+
+      return ResponseUtil.success(
+        res,
+        {
+          entryType,
+          materials: materialsWithRates,
+          totalCount: materialsWithRates.length,
+          organizationId: req.organizationId,
+        },
+        `Materials for ${entryType} retrieved successfully`
+      );
+    } catch (error: any) {
+      console.error("Get materials by entry type error:", error);
+      return ResponseUtil.error(res, error.message);
+    }
+  };
+
+  // NEW: GET /api/material-rates/available-for-entry-type/:entryType - Get all materials available to link to an entry type
+  getAvailableMaterialsForEntryType = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ) => {
+    try {
+      if (!req.user || !req.organizationId) {
+        return ResponseUtil.unauthorized(res, "Authentication required");
+      }
+
+      const { entryType } = req.params;
+
+      // Validate entry type
+      if (!Object.values(EntryType).includes(entryType as EntryType)) {
+        return ResponseUtil.badRequest(res, "Invalid entry type");
+      }
+
+      // Get all material rates for the organization
+      const allMaterialRates =
+        await this.materialRateService.getMaterialRatesByOrganization(
+          req.organizationId
+        );
+
+      // Get materials already linked to this entry type
+      const linkedMaterials =
+        await this.entryTypeMaterialService.getEntryTypeMaterialsByEntryType(
+          req.organizationId,
+          entryType as EntryType
+        );
+
+      const linkedMaterialRateIds = new Set(
+        linkedMaterials.map((etm) => etm.materialRateId)
+      );
+
+      // Filter out already linked materials
+      const availableMaterials = allMaterialRates
+        .filter((rate: any) => !linkedMaterialRateIds.has(rate.id))
+        .map((rate: any) => ({
+          id: rate.id,
+          materialType: rate.materialType,
+          ratePerUnit: Number(rate.ratePerUnit),
+          unitType: rate.unitType,
+          isActive: rate.isActive,
+          lastUpdated: rate.updatedAt,
+        }));
+
+      return ResponseUtil.success(
+        res,
+        {
+          entryType,
+          availableMaterials,
+          totalCount: availableMaterials.length,
+          organizationId: req.organizationId,
+        },
+        `Available materials for ${entryType} retrieved successfully`
+      );
+    } catch (error: any) {
+      console.error("Get available materials for entry type error:", error);
       return ResponseUtil.error(res, error.message);
     }
   };
