@@ -207,4 +207,31 @@ export class TruckEntryService {
 
     return entries;
   }
+
+  async getTruckEntriesByDateRange(
+    organizationId: string,
+    startDate: string,
+    endDate: string
+  ): Promise<TruckEntry[]> {
+    if (!organizationId || !startDate || !endDate) {
+      throw new Error("Organization ID, start date, and end date are required");
+    }
+
+    const filters: TruckEntryFilters = {
+      page: 1,
+      limit: 10000, // Get all entries within date range
+      sortBy: "createdAt",
+      sortOrder: "desc",
+      status: "active",
+      startDate,
+      endDate,
+    };
+
+    const { entries } = await this.truckEntryDAO.findByOrganizationId(
+      organizationId,
+      filters
+    );
+
+    return entries;
+  }
 }

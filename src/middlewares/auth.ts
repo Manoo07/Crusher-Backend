@@ -5,82 +5,74 @@ import { AuthenticatedRequest } from "../types";
 import { ResponseUtil } from "../utils/response";
 
 export class AuthMiddleware {
-  private static userService = new UserService();
-
-  // Authentication middleware with proper JWT verification
-  static async authenticate(
+  static authenticate = async (
     req: AuthenticatedRequest,
     res: Response,
     next: NextFunction
-  ) {
+  ): Promise<void> => {
     try {
       const authHeader = req.headers.authorization;
 
       if (!authHeader || !authHeader.startsWith("Bearer ")) {
-        return ResponseUtil.unauthorized(res, "Authentication token required");
+        ResponseUtil.unauthorized(res, "Access token required");
+        return;
       }
 
       const token = authHeader.substring(7);
 
-      try {
-        // Verify JWT token
-        const decoded = jwt.verify(
-          token,
-          process.env.JWT_SECRET || "your-secret-key-here"
-        ) as any;
-
-        // Get fresh user data from database
-        const user = await AuthMiddleware.userService.getUserById(
-          decoded.userId
-        );
-
-        if (!user) {
-          return ResponseUtil.unauthorized(res, "Invalid authentication token");
-        }
-
-        if (!user.isActive) {
-          return ResponseUtil.forbidden(res, "Account is deactivated");
-        }
-
-        // Attach user to request object
-        req.user = user;
-        req.organizationId = decoded.organizationId || user.organizationId;
-
-        return next();
-      } catch (jwtError) {
-        return ResponseUtil.unauthorized(res, "Invalid authentication token");
-      }
-    } catch (error) {
-      console.error("Authentication error:", error);
-      return ResponseUtil.unauthorized(res, "Authentication failed");
-    }
-  }
-
-  static requireRole(allowedRoles: string[]) {
-    return (
-      req: AuthenticatedRequest,
-      res: Response,
-      next: NextFunction
-    ): void => {
-      if (!req.user) {
-        ResponseUtil.unauthorized(res, "Authentication required");
+      if (!token) {
+        ResponseUtil.unauthorized(res, "Access token required");
         return;
       }
 
-      if (!allowedRoles.includes(req.user.role)) {
-        ResponseUtil.forbidden(res, "Insufficient permissions");
+      // Verify JWT token
+      const decoded = jwt.verify(
+        token,
+        process.env.JWT_SECRET || "your-secret-key-here"
+      ) as any;
+
+      if (!decoded || !decoded.userId) {
+        ResponseUtil.unauthorized(res, "Invalid token");
         return;
       }
+
+      // Get user from database
+      const userService = new UserService();
+      const user = await userService.getUserById(decoded.userId);
+
+      if (!user) {
+        ResponseUtil.unauthorized(res, "User not found");
+        return;
+      }
+
+      if (!user.isActive) {
+        ResponseUtil.forbidden(res, "Account is deactivated");
+        return;
+      }
+
+      // Attach user and organization to request
+      req.user = user;
+      req.organizationId = decoded.organizationId || user.organizationId;
 
       next();
-    };
-  }
+    } catch (error: any) {
+      console.error("Authentication error:", error);
 
-  static requireOwner() {
-    return AuthMiddleware.requireRole(["owner"]);
-  }
+      if (error.name === "JsonWebTokenError") {
+        ResponseUtil.unauthorized(res, "Invalid token");
+        return;
+      }
 
-  static requireActiveUser() {
+      if (error.name === "TokenExpiredError") {
+        ResponseUtil.unauthorized(res, "Token expired");
+        return;
+      }
+
+      ResponseUtil.unauthorized(res, "Authentication failed");
+    }
+  };
+
+  static requireActiveUser = () => {
     return (
       req: AuthenticatedRequest,
       res: Response,
@@ -98,9 +90,9 @@ export class AuthMiddleware {
 
       next();
     };
-  }
+  };
 
-  static requireOrganization() {
+  static requireOwner = () => {
     return (
       req: AuthenticatedRequest,
       res: Response,
@@ -111,12 +103,12 @@ export class AuthMiddleware {
         return;
       }
 
-      if (!req.organizationId) {
-        ResponseUtil.forbidden(res, "Organization access required");
+      if (req.user.role !== "owner") {
+        ResponseUtil.forbidden(res, "Owner access required");
         return;
       }
 
       next();
     };
-  }
+  };
 }

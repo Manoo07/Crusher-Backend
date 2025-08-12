@@ -96,4 +96,30 @@ export class OtherExpenseService {
     const expense = await this.otherExpenseDAO.findById(expenseId);
     return expense?.organizationId === organizationId;
   }
+
+  async getExpensesByDateRange(
+    organizationId: string,
+    startDate: string,
+    endDate: string
+  ): Promise<OtherExpense[]> {
+    if (!organizationId || !startDate || !endDate) {
+      throw new Error("Organization ID, start date, and end date are required");
+    }
+
+    const filters: ExpenseFilters = {
+      page: 1,
+      limit: 10000, // Get all expenses within date range
+      sortBy: "createdAt",
+      sortOrder: "desc",
+      startDate,
+      endDate,
+    };
+
+    const { expenses } = await this.otherExpenseDAO.findByOrganizationId(
+      organizationId,
+      filters
+    );
+
+    return expenses;
+  }
 }
