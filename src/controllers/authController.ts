@@ -62,7 +62,6 @@ export class AuthController {
         // Then create the organization with the user as owner
         const organization = await this.organizationService.createOrganization({
           name: organizationName,
-          ownerId: user.id,
         });
 
         finalOrganizationId = organization.id;

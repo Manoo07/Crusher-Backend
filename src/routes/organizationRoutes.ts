@@ -35,11 +35,9 @@ router.get(
 
 // Other protected routes
 
-// Create organization
+// Create organization (no authentication required)
 router.post(
   "/",
-  AuthMiddleware.authenticate,
-  AuthMiddleware.requireActiveUser(),
   ValidationMiddleware.validateRequired(["name"]),
   ErrorMiddleware.asyncHandler(organizationController.createOrganization)
 );

@@ -10,12 +10,12 @@ datasource db {
 model Organization {
   id                 String              @id @default(uuid())
   name               String              @unique @db.VarChar(100)
-  ownerId            String              @unique @map("owner_id")
+  ownerId            String?             @unique @map("owner_id")
   createdAt          DateTime            @default(now()) @map("created_at")
   updatedAt          DateTime            @updatedAt @map("updated_at")
   materialRates      MaterialRate[]
   entryTypeMaterials EntryTypeMaterial[]
-  owner              User                @relation("OrganizationOwner", fields: [ownerId], references: [id])
+  owner              User?               @relation("OrganizationOwner", fields: [ownerId], references: [id])
   otherExpenses      OtherExpense[]
   truckEntries       TruckEntry[]
   users              User[]              @relation("OrganizationMembers")
@@ -157,3 +157,4 @@ enum EntryStatus {
   active
   deleted
 }
+

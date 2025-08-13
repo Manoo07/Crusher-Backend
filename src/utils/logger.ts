@@ -1,4 +1,8 @@
-import winston from "winston";
+import * as winston from "winston";
+
+// Logger configuration constants
+export const LOG_LEVEL = process.env.LOG_LEVEL || "info";
+export const LOG_FORMAT = "YYYY-MM-DD HH:mm:ss.SSSZZ";
 
 const { splat, combine, timestamp, printf } = winston.format;
 
@@ -12,12 +16,8 @@ const customFormat = printf(
 
 export const logger = winston.createLogger({
   handleExceptions: true,
-  level: process.env.LOG_LEVEL || "info",
-  format: combine(
-    timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
-    splat(),
-    customFormat
-  ),
+  level: LOG_LEVEL,
+  format: combine(timestamp({ format: LOG_FORMAT }), splat(), customFormat),
   transports: [
     new winston.transports.Console({
       handleExceptions: true,

@@ -10,17 +10,12 @@ export class OrganizationController {
     this.organizationService = new OrganizationService();
   }
 
-  createOrganization = async (req: AuthenticatedRequest, res: Response) => {
+  createOrganization = async (req: Request, res: Response) => {
     try {
       const { name } = req.body;
 
-      if (!req.user) {
-        return ResponseUtil.unauthorized(res, "Authentication required");
-      }
-
       const organization = await this.organizationService.createOrganization({
         name,
-        ownerId: req.user.id,
       });
 
       return ResponseUtil.success(

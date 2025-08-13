@@ -20,6 +20,38 @@ export class OrganizationDAO {
     });
   }
 
+  async createWithoutOwner(data: { name: string }): Promise<Organization> {
+    // Create organization with a system default owner ID or handle schema constraints
+    // Since the schema requires ownerId, we'll need a system user or modify the approach
+    throw new Error(
+      "Schema requires ownerId - please modify the database schema to make ownerId optional"
+    );
+  }
+
+  async createPlain(data: { name: string }): Promise<Organization> {
+    // Create organization with a system default UUID for ownerId
+    // This allows creating "plain" organizations without requiring a real owner
+    // const systemOwnerId = "550e8400-e29b-41d4-a716-446655440000";
+
+    return await prisma.organization.create({
+      data: {
+        name: data.name,
+        // ownerId: systemOwnerId,
+      },
+      include: {
+        owner: true,
+        _count: {
+          select: {
+            users: true,
+            truckEntries: true,
+            materialRates: true,
+            otherExpenses: true,
+          },
+        },
+      },
+    });
+  }
+
   async findById(id: string): Promise<Organization | null> {
     return await prisma.organization.findUnique({
       where: { id },

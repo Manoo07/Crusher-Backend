@@ -1,0 +1,58 @@
+version: "3.8"
+
+services:
+  # Development application service
+  crusher-backend-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: crusher-backend-dev
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/crusher_backend
+      - JWT_SECRET=development-jwt-secret
+      - CORS_ORIGIN=*
+      - LOG_LEVEL=debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - crusher-network
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - ./logs:/app/logs
+    command: npm run dev:watch
+
+  # PostgreSQL database service
+  postgres:
+    image: postgres:15-alpine
+    container_name: crusher-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: crusher_backend
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    networks:
+      - crusher-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d crusher_backend"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_dev_data:
+    driver: local
+
+networks:
+  crusher-network:
+    driver: bridge

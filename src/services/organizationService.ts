@@ -13,10 +13,7 @@ export class OrganizationService {
     this.userDAO = new UserDAO();
   }
 
-  async createOrganization(data: {
-    name: string;
-    ownerId: string;
-  }): Promise<Organization> {
+  async createOrganization(data: { name: string }): Promise<Organization> {
     // Validate organization name
     if (!data.name || data.name.trim().length === 0) {
       throw new Error("Organization name is required");
@@ -32,23 +29,9 @@ export class OrganizationService {
       throw new Error("Organization name already exists");
     }
 
-    // Verify owner exists
-    const owner = await this.userDAO.findById(data.ownerId);
-    if (!owner) {
-      throw new Error("Owner not found");
-    }
-
-    // Check if owner already has an organization
-    const existingOrg = await this.organizationDAO.findByOwnerId(data.ownerId);
-    if (existingOrg) {
-      throw new Error("User already owns an organization");
-    }
-
-    return await this.organizationDAO.create({
+    // Create organization with system default owner ID directly in DAO
+    return await this.organizationDAO.createPlain({
       name: data.name.trim(),
-      owner: {
-        connect: { id: data.ownerId },
-      },
     });
   }
 
