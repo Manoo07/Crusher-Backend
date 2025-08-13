@@ -2,6 +2,7 @@ import { Response } from "express";
 import moment from "moment";
 import { ReportService } from "../services/reportService";
 import { AuthenticatedRequest } from "../types";
+import { logger } from "../utils/logger";
 import { ResponseUtil } from "../utils/response";
 
 export class ReportController {
@@ -15,8 +16,18 @@ export class ReportController {
     req: AuthenticatedRequest,
     res: Response
   ): Promise<void> => {
+    logger.info("PDF report generation request received", {
+      userId: req.user?.id,
+      organizationId: req.organizationId,
+      startDate: req.query.startDate,
+      endDate: req.query.endDate,
+    });
+
     try {
       if (!req.user || !req.organizationId) {
+        logger.warn("Unauthorized PDF report generation attempt", {
+          userId: req.user?.id,
+        });
         ResponseUtil.unauthorized(res, "Authentication required");
         return;
       }
@@ -24,6 +35,9 @@ export class ReportController {
       const { startDate, endDate } = req.query;
 
       if (!startDate || !endDate) {
+        logger.warn("PDF report generation missing date parameters", {
+          userId: req.user.id,
+        });
         ResponseUtil.badRequest(res, "Start date and end date are required");
         return;
       }
@@ -33,6 +47,11 @@ export class ReportController {
         !moment(startDate as string, "YYYY-MM-DD", true).isValid() ||
         !moment(endDate as string, "YYYY-MM-DD", true).isValid()
       ) {
+        logger.warn("PDF report generation invalid date format", {
+          userId: req.user.id,
+          startDate,
+          endDate,
+        });
         ResponseUtil.badRequest(res, "Invalid date format. Use YYYY-MM-DD");
         return;
       }
@@ -68,10 +87,21 @@ export class ReportController {
       );
       res.setHeader("Content-Length", pdfBuffer.length);
 
+      logger.info("PDF report generated successfully", {
+        userId: req.user!.id,
+        organizationId: req.organizationId,
+        filename,
+        size: pdfBuffer.length,
+      });
+
       // Send PDF
       res.send(pdfBuffer);
     } catch (error: any) {
-      console.error("PDF report generation error:", error);
+      logger.error("PDF report generation error", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+        error: error.message,
+      });
       ResponseUtil.error(res, error.message);
     }
   };
@@ -80,8 +110,19 @@ export class ReportController {
     req: AuthenticatedRequest,
     res: Response
   ): Promise<void> => {
+    logger.info("CSV report generation request received", {
+      userId: req.user?.id,
+      organizationId: req.organizationId,
+      startDate: req.query.startDate,
+      endDate: req.query.endDate,
+      type: req.query.type,
+    });
+
     try {
       if (!req.user || !req.organizationId) {
+        logger.warn("Unauthorized CSV report generation attempt", {
+          userId: req.user?.id,
+        });
         ResponseUtil.unauthorized(res, "Authentication required");
         return;
       }
@@ -89,6 +130,9 @@ export class ReportController {
       const { startDate, endDate, type } = req.query;
 
       if (!startDate || !endDate) {
+        logger.warn("CSV report generation missing date parameters", {
+          userId: req.user.id,
+        });
         ResponseUtil.badRequest(res, "Start date and end date are required");
         return;
       }
@@ -175,10 +219,23 @@ export class ReportController {
       );
       res.setHeader("Content-Length", Buffer.byteLength(csvContent, "utf8"));
 
+      logger.info("CSV report generated successfully", {
+        userId: req.user!.id,
+        organizationId: req.organizationId,
+        type: type as string,
+        filename,
+        size: csvContent.length,
+      });
+
       // Send CSV
       res.send(csvContent);
     } catch (error: any) {
-      console.error("CSV report generation error:", error);
+      logger.error("CSV report generation error", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+        type: req.query.type,
+        error: error.message,
+      });
       ResponseUtil.error(res, error.message);
     }
   };
@@ -242,7 +299,11 @@ export class ReportController {
         "Report summary retrieved successfully"
       );
     } catch (error: any) {
-      console.error("Report summary error:", error);
+      logger.error("Report summary error", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+        error: (error as Error).message,
+      });
       return ResponseUtil.error(res, error.message);
     }
   };
@@ -306,7 +367,11 @@ export class ReportController {
         "Available date ranges retrieved successfully"
       );
     } catch (error: any) {
-      console.error("Available date ranges error:", error);
+      logger.error("Available date ranges error", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+        error: (error as Error).message,
+      });
       return ResponseUtil.error(res, error.message);
     }
   };

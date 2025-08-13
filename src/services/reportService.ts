@@ -1,6 +1,7 @@
 import * as csvWriter from "csv-writer";
 import moment from "moment";
 import puppeteer from "puppeteer";
+import { logger } from "../utils/logger";
 import { MaterialRateService } from "./materialRateService";
 import { OrganizationService } from "./organizationService";
 import { OtherExpenseService } from "./otherExpenseService";
@@ -45,16 +46,29 @@ export class ReportService {
     startDate: string,
     endDate: string
   ): Promise<ReportData> {
+    logger.info("Starting report data generation", {
+      organizationId,
+      startDate,
+      endDate,
+    });
+
     try {
       // Get organization details
+      logger.info("Fetching organization details", { organizationId });
       const organization = await this.organizationService.getOrganizationById(
         organizationId
       );
       if (!organization) {
+        logger.error("Organization not found", { organizationId });
         throw new Error("Organization not found");
       }
 
       // Get truck entries within date range
+      logger.info("Fetching truck entries", {
+        organizationId,
+        startDate,
+        endDate,
+      });
       const allEntries =
         await this.truckEntryService.getTruckEntriesByDateRange(
           organizationId,
@@ -122,7 +136,7 @@ export class ReportService {
       const netProfit =
         totalSalesAmount - totalRawStoneAmount - totalExpenseAmount;
 
-      return {
+      const reportData = {
         organization,
         dateRange: { startDate, endDate },
         salesEntries,
@@ -137,15 +151,35 @@ export class ReportService {
           netProfit,
         },
       };
+
+      logger.info("Report data generation completed successfully", {
+        organizationId,
+        salesCount: salesEntries.length,
+        rawStoneCount: rawStoneEntries.length,
+        expenseCount: expenses.length,
+        netProfit,
+      });
+
+      return reportData;
     } catch (error) {
-      console.error("Error generating report data:", error);
+      logger.error("Error generating report data", {
+        organizationId,
+        startDate,
+        endDate,
+        error: (error as Error).message,
+      });
       throw error;
     }
   }
 
   async generatePdfReport(reportData: ReportData): Promise<Buffer> {
+    logger.info("Starting PDF report generation", {
+      organizationId: reportData.organization?.id,
+    });
+
     let browser;
     try {
+      logger.info("Launching Puppeteer browser");
       browser = await puppeteer.launch({
         headless: true,
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -154,9 +188,11 @@ export class ReportService {
       const page = await browser.newPage();
       await page.setViewport({ width: 1200, height: 1600 });
 
+      logger.info("Generating PDF HTML content");
       const html = this.generatePdfHTML(reportData);
       await page.setContent(html, { waitUntil: "networkidle0" });
 
+      logger.info("Converting HTML to PDF");
       const pdf = await page.pdf({
         format: "A4",
         printBackground: true,
@@ -170,12 +206,17 @@ export class ReportService {
         displayHeaderFooter: false,
       });
 
+      logger.info("PDF generated successfully", { size: pdf.length });
       return Buffer.from(pdf);
     } catch (error) {
-      console.error("Error generating PDF:", error);
+      logger.error("Error generating PDF", {
+        organizationId: reportData.organization?.id,
+        error: (error as Error).message,
+      });
       throw error;
     } finally {
       if (browser) {
+        logger.info("Closing Puppeteer browser");
         await browser.close();
       }
     }
@@ -186,16 +227,34 @@ export class ReportService {
     rawStoneCsv: string;
     expensesCsv: string;
   }> {
+    logger.info("Starting CSV reports generation", {
+      organizationId: reportData.organization?.id,
+      salesEntries: reportData.salesEntries.length,
+      rawStoneEntries: reportData.rawStoneEntries.length,
+      expenses: reportData.expenses.length,
+    });
+
     try {
+      logger.info("Generating sales CSV");
       const salesCsv = await this.generateEntriesCsv(
         reportData.salesEntries,
         "Sales"
       );
+
+      logger.info("Generating raw stone CSV");
       const rawStoneCsv = await this.generateEntriesCsv(
         reportData.rawStoneEntries,
         "Raw Stone"
       );
+
+      logger.info("Generating expenses CSV");
       const expensesCsv = await this.generateExpensesCsv(reportData.expenses);
+
+      logger.info("CSV reports generated successfully", {
+        salesCsvSize: salesCsv.length,
+        rawStoneCsvSize: rawStoneCsv.length,
+        expensesCsvSize: expensesCsv.length,
+      });
 
       return {
         salesCsv,
@@ -203,7 +262,10 @@ export class ReportService {
         expensesCsv,
       };
     } catch (error) {
-      console.error("Error generating CSV:", error);
+      logger.error("Error generating CSV reports", {
+        organizationId: reportData.organization?.id,
+        error: (error as Error).message,
+      });
       throw error;
     }
   }

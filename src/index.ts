@@ -1,24 +1,25 @@
 import app from "./app";
+import { logger } from "./utils/logger";
 
 const PORT = process.env.PORT || 3000;
 
 // Start server (only when running locally, not in serverless)
 if (require.main === module) {
   const server = app.listen(PORT, () => {
-    console.log(`🚀 Server is running on port ${PORT}`);
-    console.log(`📊 Environment: ${process.env.NODE_ENV || "development"}`);
-    console.log(`📊 API Base URL: http://localhost:${PORT}/api`);
-    console.log(`📊 Health Check: http://localhost:${PORT}/api/health`);
-    console.log(
+    logger.info(`🚀 Server is running on port ${PORT}`);
+    logger.info(`📊 Environment: ${process.env.NODE_ENV || "development"}`);
+    logger.info(`📊 API Base URL: http://localhost:${PORT}/api`);
+    logger.info(`📊 Health Check: http://localhost:${PORT}/api/health`);
+    logger.info(
       `🔧 Database: ${
         process.env.DATABASE_URL ? "Connected" : "Not configured"
       }`
     );
 
     if (process.env.NODE_ENV === "development") {
-      console.log(`🐛 Development mode - Enhanced logging enabled`);
+      logger.info(`🐛 Development mode - Enhanced logging enabled`);
       if (process.env.SKIP_AUTH === "true") {
-        console.log(`⚠️  Authentication bypassed for development`);
+        logger.warn(`⚠️  Authentication bypassed for development`);
       }
     }
   });
@@ -26,26 +27,26 @@ if (require.main === module) {
   // Handle server errors
   server.on("error", (error: any) => {
     if (error.code === "EADDRINUSE") {
-      console.error(`❌ Port ${PORT} is already in use`);
+      logger.error(`❌ Port ${PORT} is already in use`);
     } else {
-      console.error("❌ Server error:", error);
+      logger.error("❌ Server error", { error: error.message });
     }
     process.exit(1);
   });
 
   // Graceful shutdown handlers
   process.on("SIGTERM", async () => {
-    console.log("🔄 SIGTERM received, shutting down gracefully");
+    logger.info("🔄 SIGTERM received, shutting down gracefully");
     server.close(() => {
-      console.log("✅ HTTP server closed");
+      logger.info("✅ HTTP server closed");
       process.exit(0);
     });
   });
 
   process.on("SIGINT", async () => {
-    console.log("🔄 SIGINT received, shutting down gracefully");
+    logger.info("🔄 SIGINT received, shutting down gracefully");
     server.close(() => {
-      console.log("✅ HTTP server closed");
+      logger.info("✅ HTTP server closed");
       process.exit(0);
     });
   });

@@ -1,27 +1,30 @@
 import { Response } from 'express';
 import moment from 'moment';
 import { ReportService } from '../services/reportService';
+import { OrganizationService } from '../services/organizationService';
 import { AuthenticatedRequest } from '../types';
 import { ResponseUtil } from '../utils/response';
 
 export class ReportController {
   private reportService: ReportService;
+  private organizationService: OrganizationService;
 
   constructor() {
     this.reportService = new ReportService();
+    this.organizationService = new OrganizationService();
   }
 
   generatePdfReport = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      if (!req.user || !req.organizationId) {
-        ResponseUtil.unauthorized(res, "Authentication required");
-        return;
-      }
-
-      const { startDate, endDate } = req.query;
+      const { startDate, endDate, organizationId } = req.query;
 
       if (!startDate || !endDate) {
         ResponseUtil.badRequest(res, "Start date and end date are required");
+        return;
+      }
+
+      if (!organizationId) {
+        ResponseUtil.badRequest(res, "Organization ID is required");
         return;
       }
 
@@ -43,7 +46,7 @@ export class ReportController {
 
       // Generate report data
       const reportData = await this.reportService.generateReportData(
-        req.organizationId,
+        organizationId as string,
         startDate as string,
         endDate as string
       );
@@ -69,15 +72,15 @@ export class ReportController {
 
   generateCsvReport = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
-      if (!req.user || !req.organizationId) {
-        ResponseUtil.unauthorized(res, "Authentication required");
-        return;
-      }
-
-      const { startDate, endDate, type } = req.query;
+      const { startDate, endDate, type, organizationId } = req.query;
 
       if (!startDate || !endDate) {
         ResponseUtil.badRequest(res, "Start date and end date are required");
+        return;
+      }
+
+      if (!organizationId) {
+        ResponseUtil.badRequest(res, "Organization ID is required");
         return;
       }
 
@@ -104,7 +107,7 @@ export class ReportController {
 
       // Generate report data
       const reportData = await this.reportService.generateReportData(
-        req.organizationId,
+        organizationId as string,
         startDate as string,
         endDate as string
       );

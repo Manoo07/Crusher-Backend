@@ -6,7 +6,19 @@ import { ErrorMiddleware } from "../middlewares/error";
 const router = Router();
 const reportController = new ReportController();
 
-// Apply authentication middleware to all routes
+// GET /api/business-reports/pdf?startDate=2025-01-01&endDate=2025-01-31 (no auth required)
+router.get(
+  "/pdf",
+  ErrorMiddleware.asyncHandler(reportController.generatePdfReport)
+);
+
+// GET /api/business-reports/csv?startDate=2025-01-01&endDate=2025-01-31&type=sales (no auth required)
+router.get(
+  "/csv",
+  ErrorMiddleware.asyncHandler(reportController.generateCsvReport)
+);
+
+// Apply authentication middleware to protected routes
 router.use(AuthMiddleware.authenticate);
 router.use(AuthMiddleware.requireActiveUser());
 
@@ -14,18 +26,6 @@ router.use(AuthMiddleware.requireActiveUser());
 router.get(
   "/summary",
   ErrorMiddleware.asyncHandler(reportController.getReportSummary)
-);
-
-// GET /api/reports/pdf?startDate=2025-01-01&endDate=2025-01-31
-router.get(
-  "/pdf",
-  ErrorMiddleware.asyncHandler(reportController.generatePdfReport)
-);
-
-// GET /api/reports/csv?startDate=2025-01-01&endDate=2025-01-31&type=sales
-router.get(
-  "/csv",
-  ErrorMiddleware.asyncHandler(reportController.generateCsvReport)
 );
 
 // GET /api/reports/date-ranges - Get predefined date ranges
