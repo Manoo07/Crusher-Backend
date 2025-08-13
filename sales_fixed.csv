@@ -1,9 +1,0 @@
-Date,Vehicle Number,Material Type,Quantity (Loads),Rate per Load,Total Amount,Customer Name,Remarks
-11/08/2025,TS08UY7654,"3/4"" jalli",2,18000,36000,test,
-11/08/2025,KA08OP0123,Dust,10,12000,120000,Driver H,Sample dust materials sales
-11/08/2025,KA07MN6789,"1/4"" kuranai",20,16000,320000,Driver G,Sample 1/4 kuranai sales
-11/08/2025,KA06KL2345,"1/2"" jalli",15,17000,255000,Driver F,Sample 1/2 jalli sales
-11/08/2025,KA05IJ7890,"1 1/2"" Metal",6,25000,150000,Driver E,Sample 1 1/2 Metal sales
-11/08/2025,KA04GH3456,"3/4"" jalli",12,18000,216000,Driver D,Sample 3/4 jalli sales
-11/08/2025,KA03EF9012,Psand,8,20000,160000,Driver C,Sample P-Sand sales
-11/08/2025,KA01AB1234,Msand,10,22000,220000,Driver A,Sample M-Sand sales entry
