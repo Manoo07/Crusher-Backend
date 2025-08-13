@@ -166,6 +166,7 @@ export class OtherExpenseDAO {
       prisma.otherExpense.findMany({
         where,
         select: {
+          id: true,
           expensesName: true,
           amount: true,
           others: true,
@@ -180,6 +181,7 @@ export class OtherExpenseDAO {
       totalExpenses,
       totalAmount: totalAmount._sum.amount || 0,
       expenses: expenses.map((item) => ({
+        id: item.id,
         expensesName: item.expensesName,
         totalAmount: item.amount || 0,
         others: item.others || null,
