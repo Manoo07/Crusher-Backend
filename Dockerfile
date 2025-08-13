@@ -7,14 +7,14 @@ RUN npm ci
 COPY src/ ./src/
 COPY prisma/ ./prisma/
 
-# Ensure Prisma binary is built for Alpine
-RUN npx prisma generate --binary-target=linux-musl
+# Generate Prisma client for Alpine
+RUN npx prisma generate
 RUN npm run build
 
 FROM node:18-alpine AS production
 
 # Install dependencies for Prisma & dumb-init
-RUN apk add --no-cache dumb-init openssl1.1
+RUN apk add --no-cache dumb-init openssl
 
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nextjs -u 1001
