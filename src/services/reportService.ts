@@ -345,8 +345,8 @@ export class ReportService {
             
             .container {
                 max-width: 100%;
-                padding: 20px;
-                background: #f8fafc;
+                padding: 0;
+                background: white;
             }
             
             /* Header Section */
@@ -371,7 +371,7 @@ export class ReportService {
                 border-radius: 50%;
                 background: white;
                 padding: 4px;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+                border: 3px solid #1e40af;
             }
             
             .company-name {
@@ -415,9 +415,10 @@ export class ReportService {
             
             /* Summary Section */
             .summary-section {
-                padding: 24px;
+                padding: 32px 24px;
                 background: white;
-                border-bottom: 1px solid #e2e8f0;
+                border-bottom: 3px solid #e2e8f0;
+                margin-bottom: 48px;
             }
             
             .summary-title {
@@ -438,11 +439,10 @@ export class ReportService {
             
             .summary-card {
                 background: #ffffff;
-                border: 1px solid #e2e8f0;
-                border-radius: 8px;
-                padding: 16px;
-                border-left: 4px solid #2563eb;
-                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                border: 2px solid #e2e8f0;
+                border-radius: 0;
+                padding: 20px;
+                border-left: 6px solid #2563eb;
             }
             
             .summary-card.sales {
@@ -492,24 +492,24 @@ export class ReportService {
             /* Section Styles */
             .section {
                 background: white;
-                margin-bottom: 24px;
-                border-radius: 8px;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-                overflow: hidden;
+                margin-bottom: 48px;
+                border: none;
+                overflow: visible;
             }
             
             .section:last-of-type {
-                margin-bottom: 0;
+                margin-bottom: 32px;
             }
             
             .section-header {
-                background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-                padding: 20px 24px;
-                border-bottom: 2px solid #e2e8f0;
+                background: transparent;
+                padding: 0 0 16px 0;
+                border-bottom: none;
+                margin-bottom: 12px;
             }
             
             .section-title {
-                font-size: 18px;
+                font-size: 20px;
                 font-weight: 700;
                 color: #1e293b;
                 display: flex;
@@ -517,15 +517,29 @@ export class ReportService {
                 gap: 12px;
                 margin: 0;
                 text-transform: uppercase;
-                letter-spacing: 0.5px;
+                letter-spacing: 1px;
+                padding-bottom: 8px;
+                border-bottom: 3px solid transparent;
+            }
+            
+            .section-title.sales {
+                border-bottom-color: #10b981;
+            }
+            
+            .section-title.rawstone {
+                border-bottom-color: #f59e0b;
+            }
+            
+            .section-title.expenses {
+                border-bottom-color: #ef4444;
             }
             
             .section-title::before {
                 content: '';
-                width: 4px;
-                height: 24px;
+                width: 6px;
+                height: 28px;
                 background: #2563eb;
-                border-radius: 2px;
+                border-radius: 0;
             }
             
             .section-title.sales::before {
@@ -540,10 +554,11 @@ export class ReportService {
                 background: #ef4444;
             }
             
-            /* Table Styles */
+            /* Table Container */
             .table-container {
                 padding: 0;
                 overflow-x: auto;
+                margin-bottom: 16px;
             }
             
             table {
@@ -554,15 +569,15 @@ export class ReportService {
             }
             
             th {
-                background: #f1f5f9;
-                color: #1e293b;
-                padding: 16px 12px;
+                background: #334155 !important;
+                color: white !important;
+                padding: 18px 14px;
                 text-align: left;
                 font-weight: 700;
                 text-transform: uppercase;
                 font-size: 11px;
-                letter-spacing: 0.8px;
-                border: 1px solid #cbd5e1;
+                letter-spacing: 1px;
+                border: 1px solid #1e293b;
                 white-space: nowrap;
                 position: sticky;
                 top: 0;
@@ -571,51 +586,66 @@ export class ReportService {
             
             th.amount {
                 text-align: right;
-                padding-right: 16px;
+                padding-right: 18px;
+                background: #334155 !important;
+                color: white !important;
             }
             
             th:first-child {
-                border-left: 2px solid #cbd5e1;
+                border-left: 2px solid #1e293b;
+                background: #334155 !important;
             }
             
             th:last-child {
-                border-right: 2px solid #cbd5e1;
+                border-right: 2px solid #1e293b;
+                background: #334155 !important;
             }
             
             td {
-                padding: 14px 12px;
-                border: 1px solid #e2e8f0;
+                padding: 16px 14px;
+                border: 1px solid #cbd5e1;
                 vertical-align: middle;
-                color: #334155;
+                color: #1e293b;
                 font-size: 12px;
                 background: white;
+                font-weight: 500;
             }
             
             td:first-child {
-                border-left: 2px solid #e2e8f0;
+                border-left: 2px solid #cbd5e1;
+                font-weight: 600;
             }
             
             td:last-child {
-                border-right: 2px solid #e2e8f0;
+                border-right: 2px solid #cbd5e1;
+            }
+            
+            /* Better table continuity styling */
+            tbody tr:first-child td {
+                border-top: 1px solid #cbd5e1;
+            }
+            
+            tbody tr:last-child td {
+                border-bottom: 2px solid #334155;
             }
             
             tr:nth-child(even) td {
-                background: #f8fafc;
+                background: #f8fafc !important;
             }
             
             tr:hover td {
-                background: #e2e8f0;
+                background: #f1f5f9 !important;
             }
             
             .amount {
                 text-align: right;
-                font-weight: 600;
+                font-weight: 700;
                 font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
                 white-space: nowrap;
                 color: #1e293b;
-                padding-right: 12px;
-                font-size: 10px;
-                min-width: 80px;
+                padding-right: 18px;
+                font-size: 12px;
+                min-width: 100px;
                 word-break: break-all;
             }
             
@@ -696,25 +726,35 @@ export class ReportService {
                     break-inside: auto;
                     page-break-before: avoid;
                     break-before: avoid;
+                    margin-bottom: 24px;
                 }
                 
                 .section-header {
                     page-break-after: avoid;
                     break-after: avoid;
+                    margin-bottom: 0;
                 }
                 
                 table {
                     page-break-inside: auto;
                     break-inside: auto;
+                    border-radius: 0;
+                    margin-bottom: 16px;
                 }
                 
                 thead {
                     display: table-header-group;
+                    break-inside: avoid;
                 }
                 
-                tr {
-                    page-break-inside: avoid;
+                tbody tr {
                     break-inside: avoid;
+                }
+                
+                th {
+                    background: #94a3b8 !important;
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
                 }
                 
                 .summary-grid {
