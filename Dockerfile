@@ -1,85 +1,39 @@
-FROM node:18-slim AS builder
+FROM node:18-alpine AS builder
+
 WORKDIR /app
-
-# Install only essential build dependencies
-RUN apt-get update && apt-get install -y \
-    python3 \
-    make \
-    g++ \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
-
-# Copy and install dependencies first (better layer caching)
 COPY package*.json ./
-RUN npm ci --no-audit --no-fund
-
-# Copy source files
 COPY tsconfig*.json ./
-COPY prisma/ ./prisma/
+RUN npm ci
 COPY src/ ./src/
+COPY prisma/ ./prisma/
 
-# Generate Prisma and build
+# Generate Prisma client for Alpine
 RUN npx prisma generate
 RUN npm run build
 
-# -------------------------------------------------------
-FROM node:18-slim AS production
+FROM node:18-alpine AS production
 
-# Install minimal runtime dependencies for Chromium
-RUN apt-get update && apt-get install -y \
-    --no-install-recommends \
-    dumb-init \
-    chromium \
-    ca-certificates \
-    fonts-liberation \
-    libatk-bridge2.0-0 \
-    libatk1.0-0 \
-    libcups2 \
-    libdrm2 \
-    libgbm1 \
-    libgtk-3-0 \
-    libnspr4 \
-    libnss3 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxrandr2 \
-    libxss1 \
-    libxtst6 \
-    libasound2 \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean \
-    && rm -rf /tmp/* /var/tmp/*
+# Install dependencies for Prisma & dumb-init
+RUN apk add --no-cache dumb-init openssl
 
-# Create user and directories
-RUN addgroup --system nodejs && adduser --system nextjs \
-    && mkdir -p /tmp/chrome-user-data /home/nextjs/.cache/chromium \
-    && chmod 755 /tmp/chrome-user-data \
-    && chown -R nextjs:nodejs /home/nextjs
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001
 
 WORKDIR /app
-
-# Copy package files and install production dependencies
 COPY package*.json ./
-RUN npm ci --only=production --no-audit --no-fund \
-    && npm cache clean --force
+RUN npm ci --only=production && npm cache clean --force
 
-# Copy build artifacts and runtime files
-COPY --from=builder --chown=nextjs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/prisma ./prisma
 COPY --chown=nextjs:nodejs public ./public
 
+RUN chown -R nextjs:nodejs /app
 USER nextjs
 
-# Environment variables
-ENV NODE_ENV=production \
-    PORT=3000 \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
-    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_SKIP_DOWNLOAD=true \
-    CHROME_PATH=/usr/bin/chromium
-
 EXPOSE 3000
+ENV NODE_ENV=production
+ENV PORT=3000
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD node dist/healthcheck.js || exit 1
