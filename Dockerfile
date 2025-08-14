@@ -1,6 +1,14 @@
 FROM node:18-slim AS builder
 WORKDIR /app
 
+# Install build dependencies for native modules if needed
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
 COPY package*.json tsconfig*.json ./
 RUN npm ci
 COPY src/ ./src/
@@ -9,13 +17,14 @@ COPY prisma/ ./prisma/
 RUN npx prisma generate
 RUN npm run build
 
+# -------------------------------------------------------
 FROM node:18-slim AS production
 
+# Install Chromium + required deps for Puppeteer
 RUN apt-get update && apt-get install -y \
     dumb-init \
     openssl \
     chromium \
-    nss \
     fonts-liberation \
     libatk-bridge2.0-0 \
     libatk1.0-0 \
@@ -34,12 +43,15 @@ RUN apt-get update && apt-get install -y \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
+# Create non-root user
 RUN addgroup --system nodejs && adduser --system nextjs
 
 WORKDIR /app
+
 COPY package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 
+# Copy build and necessary runtime files
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/prisma ./prisma
@@ -47,6 +59,7 @@ COPY --chown=nextjs:nodejs public ./public
 
 USER nextjs
 
+# Puppeteer env
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
