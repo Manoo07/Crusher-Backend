@@ -265,14 +265,10 @@ export class ReportService {
 
       // If PDF generation fails in Docker, provide HTML as fallback
       const errorMessage = (error as Error).message || "";
-      if (
-        errorMessage.includes("Failed to launch") ||
-        errorMessage.includes("chrome_crashpad_handler") ||
-        errorMessage.includes("Connection reset by peer")
-      ) {
-        logger.warn("PDF generation failed, generating HTML fallback report");
-        const html = this.generatePdfHTML(reportData);
-        const htmlReport = `
+      // In server/production environment, always provide HTML fallback for any error
+      logger.warn("PDF generation failed, generating HTML fallback report");
+      const html = this.generatePdfHTML(reportData);
+      const htmlReport = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -286,21 +282,19 @@ export class ReportService {
       margin: 20px 0; 
       border: 2px solid #f57f17;
       border-radius: 5px;
+      font-family: Arial, sans-serif;
     }
   </style>
 </head>
 <body>
   <div class="fallback-notice">
     ⚠️ <strong>Notice:</strong> PDF generation is temporarily unavailable. 
-    This HTML version contains all the same data.
+    This HTML version contains all the same data. You can print this page to create a PDF.
   </div>
   ${html}
 </body>
 </html>`;
-        return Buffer.from(htmlReport, "utf8");
-      }
-
-      throw error;
+      return Buffer.from(htmlReport, "utf8");
     } finally {
       if (browser) {
         logger.info("Closing Puppeteer browser");
