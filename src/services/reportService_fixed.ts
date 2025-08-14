@@ -181,7 +181,7 @@ export class ReportService {
     try {
       logger.info("Launching Puppeteer browser with optimized settings");
       browser = await puppeteer.launch({
-        headless: "new",
+        headless: true,
         args: [
           "--no-sandbox",
           "--disable-setuid-sandbox",
