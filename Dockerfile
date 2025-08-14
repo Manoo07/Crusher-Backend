@@ -1,55 +1,55 @@
-FROM node:18-alpine AS builder
-
+FROM node:18-slim AS builder
 WORKDIR /app
-COPY package*.json ./
-COPY tsconfig*.json ./
+
+COPY package*.json tsconfig*.json ./
 RUN npm ci
 COPY src/ ./src/
 COPY prisma/ ./prisma/
 
-# Generate Prisma client for Alpine
 RUN npx prisma generate
 RUN npm run build
 
-FROM node:18-alpine AS production
+FROM node:18-slim AS production
 
-# Install dependencies for Chromium, Puppeteer, Prisma & dumb-init
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y \
     dumb-init \
     openssl \
     chromium \
     nss \
-    freetype \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont \
-    libstdc++ \
-    bash \
-    udev
+    fonts-liberation \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libcups2 \
+    libdrm2 \
+    libgbm1 \
+    libgtk-3-0 \
+    libnspr4 \
+    libnss3 \
+    libx11-xcb1 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxrandr2 \
+    xdg-utils \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
 
-# Create user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nextjs -u 1001
+RUN addgroup --system nodejs && adduser --system nextjs
 
 WORKDIR /app
-
-# Copy package files and install only production dependencies
 COPY package*.json ./
 RUN npm ci --only=production && npm cache clean --force
 
-# Copy built app & prisma files from builder
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/prisma ./prisma
 COPY --chown=nextjs:nodejs public ./public
 
-RUN chown -R nextjs:nodejs /app
 USER nextjs
 
-# Set environment variables for Puppeteer
 ENV NODE_ENV=production
 ENV PORT=3000
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 EXPOSE 3000
 
