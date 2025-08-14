@@ -1,92 +1,73 @@
 FROM node:18-slim AS builder
 WORKDIR /app
 
-# Install build dependencies for native modules if needed
-RUN apt-get update && apt-get install -y \
+# Install build dependencies - use cache mount for faster rebuilds
+RUN --mount=type=cache,target=/var/cache/apt \
+    --mount=type=cache,target=/var/lib/apt/lists \
+    apt-get update && apt-get install -y \
     python3 \
     make \
-    g++ \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+    g++
 
-COPY package*.json tsconfig*.json ./
-RUN npm ci
-COPY src/ ./src/
+# Copy and install dependencies first (better layer caching)
+COPY package*.json ./
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --no-audit --no-fund
+
+# Copy source files
+COPY tsconfig*.json ./
 COPY prisma/ ./prisma/
+COPY src/ ./src/
 
+# Generate Prisma and build
 RUN npx prisma generate
 RUN npm run build
 
 # -------------------------------------------------------
 FROM node:18-slim AS production
 
-# Install Chromium + required deps for Puppeteer
+# Install Chrome and dependencies in a single layer with proper cleanup
 RUN apt-get update && apt-get install -y \
     dumb-init \
     openssl \
-    chromium \
-    fonts-liberation \
-    libatk-bridge2.0-0 \
-    libatk1.0-0 \
-    libcups2 \
-    libdrm2 \
-    libgbm1 \
-    libgtk-3-0 \
-    libnspr4 \
-    libnss3 \
-    libx11-xcb1 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxfixes3 \
-    libxrandr2 \
-    libxss1 \
-    libxtst6 \
+    wget \
+    gnupg \
     ca-certificates \
-    fonts-liberation \
-    libasound2 \
-    libatk-bridge2.0-0 \
-    libdrm2 \
-    libxkbcommon0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxrandr2 \
-    xdg-utils \
-    libu2f-udev \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/* \
- && mkdir -p /tmp/chrome-user-data \
- && chmod 755 /tmp/chrome-user-data
+    && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /src/*.deb
 
-# Create non-root user
-RUN addgroup --system nodejs && adduser --system nextjs
-
-# Create directories for Chrome data and temp files
-RUN mkdir -p /tmp/.X11-unix && \
-    chmod 1777 /tmp/.X11-unix && \
-    mkdir -p /home/nextjs/.cache/chromium && \
-    chown -R nextjs:nodejs /home/nextjs
+# Create user and set up directories
+RUN groupadd -r nextjs && useradd -r -g nextjs -G audio,video nextjs \
+    && mkdir -p /home/nextjs/Downloads /app \
+    && chown -R nextjs:nextjs /home/nextjs \
+    && chown -R nextjs:nextjs /app
 
 WORKDIR /app
 
+# Copy package files and install production dependencies
 COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci --only=production --no-audit --no-fund \
+    && npm cache clean --force
 
-# Copy build and necessary runtime files
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+# Copy build artifacts and runtime files
+COPY --from=builder --chown=nextjs:nextjs /app/dist ./dist
+COPY --from=builder --chown=nextjs:nextjs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/prisma ./prisma
-COPY --chown=nextjs:nodejs public ./public
+COPY --chown=nextjs:nextjs public ./public
 
+# Switch to non-root user
 USER nextjs
 
-# Puppeteer and Chrome env variables
-ENV NODE_ENV=production
-ENV PORT=3000
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV CHROME_PATH=/usr/bin/chromium
-ENV DISPLAY=:99
-ENV CHROME_DEVEL_SANDBOX=/usr/lib/chromium/chrome_sandbox
+# Environment variables
+ENV NODE_ENV=production \
+    PORT=3000 \
+    PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 
 EXPOSE 3000
 

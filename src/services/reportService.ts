@@ -177,17 +177,21 @@ export class ReportService {
       organizationId: reportData.organization?.id,
     });
 
+    // Log environment info for debugging
+    logger.info("Environment info for PDF generation", {
+      nodeEnv: process.env.NODE_ENV,
+      puppeteerExecutablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+      platform: process.platform,
+      arch: process.arch,
+      dockerContainer: process.env.DOCKER_CONTAINER || "unknown",
+    });
+
     let browser;
     try {
-      logger.info("Launching Puppeteer browser with Docker-optimized settings");
-
-      // Detect if running in Docker environment
-      const isDocker =
-        process.env.PUPPETEER_EXECUTABLE_PATH ||
-        process.env.NODE_ENV === "production";
+      logger.info("Launching Puppeteer browser with optimized Docker settings");
 
       const launchOptions: any = {
-        headless: true,
+        headless: true, // Fixed: use boolean instead of "new"
         args: [
           "--no-sandbox",
           "--disable-setuid-sandbox",
@@ -195,13 +199,12 @@ export class ReportService {
           "--disable-accelerated-2d-canvas",
           "--no-first-run",
           "--no-zygote",
-          "--single-process",
+          "--single-process", // Important for Docker
           "--disable-gpu",
           "--disable-background-timer-throttling",
           "--disable-backgrounding-occluded-windows",
           "--disable-renderer-backgrounding",
-          "--disable-features=TranslateUI",
-          "--disable-ipc-flooding-protection",
+          "--disable-features=TranslateUI,VizDisplayCompositor",
           "--disable-crash-reporter",
           "--disable-breakpad",
           "--disable-client-side-phishing-detection",
@@ -210,33 +213,45 @@ export class ReportService {
           "--hide-scrollbars",
           "--mute-audio",
           "--disable-extensions",
+          "--disable-plugins",
+          "--memory-pressure-off",
+          "--max_old_space_size=4096",
         ],
-        timeout: 60000,
+        timeout: 120000, // Increased timeout
+        protocolTimeout: 60000,
       };
 
-      // Use system Chromium in Docker
+      // Use Chrome installed in Docker
       if (process.env.PUPPETEER_EXECUTABLE_PATH) {
         launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-        logger.info("Using system Chromium executable", {
+        logger.info("Using specified Chrome executable", {
           path: process.env.PUPPETEER_EXECUTABLE_PATH,
         });
+      } else {
+        logger.warn("PUPPETEER_EXECUTABLE_PATH not set, using default Chrome");
       }
 
       browser = await puppeteer.launch(launchOptions);
 
       const page = await browser.newPage();
-      await page.setViewport({ width: 1200, height: 1600 });
+
+      // Optimize page settings
+      await page.setViewport({
+        width: 1200,
+        height: 1600,
+        deviceScaleFactor: 1,
+      });
 
       // Set reasonable timeouts
-      page.setDefaultTimeout(30000);
-      page.setDefaultNavigationTimeout(30000);
+      page.setDefaultTimeout(90000);
+      page.setDefaultNavigationTimeout(90000);
 
       logger.info("Generating PDF HTML content");
       const html = this.generatePdfHTML(reportData);
 
       await page.setContent(html, {
         waitUntil: "domcontentloaded",
-        timeout: 20000,
+        timeout: 60000,
       });
 
       logger.info("Converting HTML to PDF");
@@ -251,7 +266,7 @@ export class ReportService {
         },
         preferCSSPageSize: true,
         displayHeaderFooter: false,
-        timeout: 30000,
+        timeout: 60000,
       });
 
       logger.info("PDF generated successfully", { size: pdf.length });
@@ -263,10 +278,8 @@ export class ReportService {
         stack: (error as Error).stack,
       });
 
-      // If PDF generation fails in Docker, provide HTML as fallback
-      const errorMessage = (error as Error).message || "";
-      // In server/production environment, always provide HTML fallback for any error
-      logger.warn("PDF generation failed, generating HTML fallback report");
+      // Always provide HTML fallback for any PDF generation error
+      logger.warn("PDF generation failed, providing HTML fallback report");
       const html = this.generatePdfHTML(reportData);
       const htmlReport = `
 <!DOCTYPE html>
@@ -282,14 +295,18 @@ export class ReportService {
       margin: 20px 0; 
       border: 2px solid #f57f17;
       border-radius: 5px;
-      font-family: Arial, sans-serif;
+      font-weight: bold;
+      color: #333;
+    }
+    @media print {
+      .fallback-notice { display: none; }
     }
   </style>
 </head>
 <body>
   <div class="fallback-notice">
     ⚠️ <strong>Notice:</strong> PDF generation is temporarily unavailable. 
-    This HTML version contains all the same data. You can print this page to create a PDF.
+    This HTML version contains all the same data and can be printed or saved as PDF from your browser/app.
   </div>
   ${html}
 </body>
@@ -297,8 +314,14 @@ export class ReportService {
       return Buffer.from(htmlReport, "utf8");
     } finally {
       if (browser) {
-        logger.info("Closing Puppeteer browser");
-        await browser.close();
+        try {
+          logger.info("Closing Puppeteer browser");
+          await browser.close();
+        } catch (closeError) {
+          logger.warn("Error closing browser (non-critical)", {
+            error: (closeError as Error).message,
+          });
+        }
       }
     }
   }
