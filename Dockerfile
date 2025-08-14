@@ -1,12 +1,13 @@
 FROM node:18-slim AS builder
 WORKDIR /app
 
-# Install build dependencies (without cache mounts)
+# Install only essential build dependencies
 RUN apt-get update && apt-get install -y \
     python3 \
     make \
     g++ \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # Copy and install dependencies first (better layer caching)
 COPY package*.json ./
@@ -24,11 +25,12 @@ RUN npm run build
 # -------------------------------------------------------
 FROM node:18-slim AS production
 
-# Install runtime dependencies (without cache mounts)
+# Install minimal runtime dependencies for Chromium
 RUN apt-get update && apt-get install -y \
+    --no-install-recommends \
     dumb-init \
-    openssl \
     chromium \
+    ca-certificates \
     fonts-liberation \
     libatk-bridge2.0-0 \
     libatk1.0-0 \
@@ -38,26 +40,20 @@ RUN apt-get update && apt-get install -y \
     libgtk-3-0 \
     libnspr4 \
     libnss3 \
-    libx11-xcb1 \
     libxcomposite1 \
     libxdamage1 \
-    libxfixes3 \
     libxrandr2 \
     libxss1 \
     libxtst6 \
-    ca-certificates \
     libasound2 \
-    libxkbcommon0 \
-    xdg-utils \
-    libu2f-udev \
-    && mkdir -p /tmp/chrome-user-data \
-    && chmod 755 /tmp/chrome-user-data \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean \
+    && rm -rf /tmp/* /var/tmp/*
 
 # Create user and directories
 RUN addgroup --system nodejs && adduser --system nextjs \
-    && mkdir -p /tmp/.X11-unix /home/nextjs/.cache/chromium \
-    && chmod 1777 /tmp/.X11-unix \
+    && mkdir -p /tmp/chrome-user-data /home/nextjs/.cache/chromium \
+    && chmod 755 /tmp/chrome-user-data \
     && chown -R nextjs:nodejs /home/nextjs
 
 WORKDIR /app
@@ -80,9 +76,8 @@ ENV NODE_ENV=production \
     PORT=3000 \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
     PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    CHROME_PATH=/usr/bin/chromium \
-    DISPLAY=:99 \
-    CHROME_DEVEL_SANDBOX=/usr/lib/chromium/chrome_sandbox
+    PUPPETEER_SKIP_DOWNLOAD=true \
+    CHROME_PATH=/usr/bin/chromium
 
 EXPOSE 3000
 
