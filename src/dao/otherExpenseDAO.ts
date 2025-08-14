@@ -131,9 +131,8 @@ export class OtherExpenseDAO {
   }
 
   async delete(id: string): Promise<OtherExpense> {
-    return await prisma.otherExpense.update({
+    return await prisma.otherExpense.delete({
       where: { id },
-      data: { isActive: false },
       include: {
         organization: true,
         user: true,

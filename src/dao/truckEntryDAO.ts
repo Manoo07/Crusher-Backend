@@ -133,9 +133,8 @@ export class TruckEntryDAO {
   }
 
   async delete(id: string): Promise<TruckEntry> {
-    return await prisma.truckEntry.update({
+    return await prisma.truckEntry.delete({
       where: { id },
-      data: { status: "deleted" },
       include: {
         organization: true,
         user: true,

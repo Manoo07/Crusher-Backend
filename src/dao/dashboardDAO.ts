@@ -126,45 +126,45 @@ export class DashboardDAO {
     const netWorth =
       totalSales.totalAmount + rawStone.totalAmount - expenses.totalAmount;
 
-    // Get recent entries from all sources (combined)
-    const recentTruckEntries = await prisma.truckEntry.findMany({
-      where: truckEntryWhereClause,
-      orderBy: {
-        entryDate: "desc",
-      },
-      take: 5,
-      include: {
-        user: {
-          select: {
-            username: true,
-          },
-        },
-      },
-    });
+    // // Get recent entries from all sources (combined)
+    // const recentTruckEntries = await prisma.truckEntry.findMany({
+    //   where: truckEntryWhereClause,
+    //   orderBy: {
+    //     entryDate: "desc",
+    //   },
+    //   take: 5,
+    //   include: {
+    //     user: {
+    //       select: {
+    //         username: true,
+    //       },
+    //     },
+    //   },
+    // });
 
-    const recentExpenses = await prisma.otherExpense.findMany({
-      where: expenseWhereClause,
-      orderBy: {
-        createdAt: "desc",
-      },
-      take: 5,
-    });
+    // const recentExpenses = await prisma.otherExpense.findMany({
+    //   where: expenseWhereClause,
+    //   orderBy: {
+    //     createdAt: "desc",
+    //   },
+    //   take: 5,
+    // });
 
-    // Combine and sort recent entries
-    const combinedRecentEntries = [
-      ...recentTruckEntries.map((entry) => ({
-        ...entry,
-        type: "truck_entry",
-        date: entry.entryDate,
-      })),
-      ...recentExpenses.map((expense) => ({
-        ...expense,
-        type: "expense",
-        date: expense.createdAt,
-      })),
-    ]
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 10);
+    // // Combine and sort recent entries
+    // const combinedRecentEntries = [
+    //   ...recentTruckEntries.map((entry) => ({
+    //     ...entry,
+    //     type: "truck_entry",
+    //     date: entry.entryDate,
+    //   })),
+    //   ...recentExpenses.map((expense) => ({
+    //     ...expense,
+    //     type: "expense",
+    //     date: expense.createdAt,
+    //   })),
+    // ]
+    //   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    //   .slice(0, 10);
 
     return {
       totalEntries,
@@ -172,7 +172,7 @@ export class DashboardDAO {
       rawStone,
       expenses,
       netWorth,
-      recentEntries: combinedRecentEntries,
+      // recentEntries: combinedRecentEntries,
     };
   }
 

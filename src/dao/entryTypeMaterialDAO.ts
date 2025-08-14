@@ -93,9 +93,8 @@ export class EntryTypeMaterialDAO {
   }
 
   async delete(id: string): Promise<EntryTypeMaterial> {
-    return await prisma.entryTypeMaterial.update({
+    return await prisma.entryTypeMaterial.delete({
       where: { id },
-      data: { isActive: false },
       include: {
         organization: true,
         materialRate: true,

@@ -27,7 +27,7 @@ export interface ComprehensiveDashboardSummary {
     entries: any[];
   };
   netWorth: number;
-  recentEntries: any[];
+  // recentEntries: any[];
 }
 
 export interface RevenueByMaterial {
