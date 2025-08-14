@@ -191,7 +191,7 @@ export class ReportService {
       logger.info("Launching Puppeteer browser with optimized Docker settings");
 
       const launchOptions: any = {
-        headless: true, // Fixed: use boolean instead of "new"
+        headless: true,
         args: [
           "--no-sandbox",
           "--disable-setuid-sandbox",
@@ -216,8 +216,10 @@ export class ReportService {
           "--disable-plugins",
           "--memory-pressure-off",
           "--max_old_space_size=4096",
+          "--disable-web-security",
+          "--disable-features=VizDisplayCompositor",
         ],
-        timeout: 120000, // Increased timeout
+        timeout: 120000,
         protocolTimeout: 60000,
       };
 
@@ -272,10 +274,15 @@ export class ReportService {
       logger.info("PDF generated successfully", { size: pdf.length });
       return Buffer.from(pdf);
     } catch (error) {
-      logger.error("Error generating PDF", {
+      const errorMessage = (error as Error).message || "Unknown error";
+      const errorStack = (error as Error).stack || "No stack trace";
+
+      logger.error("Error generating PDF - Full Details", {
         organizationId: reportData.organization?.id,
-        error: (error as Error).message,
-        stack: (error as Error).stack,
+        error: errorMessage,
+        stack: errorStack,
+        puppeteerExecutablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+        nodeEnv: process.env.NODE_ENV,
       });
 
       // Always provide HTML fallback for any PDF generation error
