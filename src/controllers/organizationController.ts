@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { OrganizationService } from "../services/organizationService";
 import { AuthenticatedRequest, PaginationParams } from "../types";
+import { logger } from "../utils/logger";
 import { ResponseUtil } from "../utils/response";
 
 export class OrganizationController {
@@ -12,12 +13,14 @@ export class OrganizationController {
 
   createOrganization = async (req: Request, res: Response) => {
     try {
+      logger.info("Creating organization", { body: req.body });
       const { name } = req.body;
 
       const organization = await this.organizationService.createOrganization({
         name,
       });
 
+      logger.info("Organization created successfully", { organization });
       return ResponseUtil.success(
         res,
         organization,
@@ -25,13 +28,14 @@ export class OrganizationController {
         201
       );
     } catch (error: any) {
-      console.error("Create organization error:", error);
+      logger.error("Create organization error", { error: error.message });
       return ResponseUtil.badRequest(res, error.message);
     }
   };
 
   getOrganizationById = async (req: Request, res: Response) => {
     try {
+      logger.info("Fetching organization by ID", { params: req.params });
       const { id } = req.params;
 
       const organization = await this.organizationService.getOrganizationById(
@@ -39,16 +43,18 @@ export class OrganizationController {
       );
 
       if (!organization) {
+        logger.warn("Organization not found", { id });
         return ResponseUtil.notFound(res, "Organization not found");
       }
 
+      logger.info("Organization retrieved successfully", { organization });
       return ResponseUtil.success(
         res,
         organization,
         "Organization retrieved successfully"
       );
     } catch (error: any) {
-      console.error("Get organization error:", error);
+      logger.error("Get organization error", { error: error.message });
       return ResponseUtil.error(res, error.message);
     }
   };

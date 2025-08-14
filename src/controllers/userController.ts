@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { UserService } from "../services/userService";
 import { AuthenticatedRequest, UserFilters } from "../types";
+import { logger } from "../utils/logger";
 import { ResponseUtil } from "../utils/response";
 
 export class UserController {
@@ -11,6 +12,7 @@ export class UserController {
   }
 
   createUser = async (req: AuthenticatedRequest, res: Response) => {
+    logger.info("Create user request received", { userId: req.user?.id });
     try {
       const { username, password, role, organizationId, profileImage } =
         req.body;
@@ -41,6 +43,7 @@ export class UserController {
       // Remove password hash from response
       const { passwordHash: _, ...userResponse } = user;
 
+      logger.info("User created successfully", { userId: user.id });
       return ResponseUtil.success(
         res,
         userResponse,
@@ -48,12 +51,14 @@ export class UserController {
         201
       );
     } catch (error: any) {
+      logger.error("Create user error", { error: error.message });
       console.error("Create user error:", error);
       return ResponseUtil.badRequest(res, error.message);
     }
   };
 
   getUserById = async (req: AuthenticatedRequest, res: Response) => {
+    logger.info("Get user by ID request received", { userId: req.user?.id });
     try {
       const { id } = req.params;
 
@@ -81,18 +86,21 @@ export class UserController {
       // Remove password hash from response
       const { passwordHash: _, ...userResponse } = user;
 
+      logger.info("User retrieved successfully", { userId: user.id });
       return ResponseUtil.success(
         res,
         userResponse,
         "User retrieved successfully"
       );
     } catch (error: any) {
+      logger.error("Get user by ID error", { error: error.message });
       console.error("Get user error:", error);
       return ResponseUtil.error(res, error.message);
     }
   };
 
   getCurrentUser = async (req: AuthenticatedRequest, res: Response) => {
+    logger.info("Get current user request received", { userId: req.user?.id });
     try {
       if (!req.user) {
         return ResponseUtil.unauthorized(res, "Authentication required");
@@ -107,18 +115,21 @@ export class UserController {
       // Remove password hash from response
       const { passwordHash: _, ...userResponse } = user;
 
+      logger.info("Current user retrieved successfully", { userId: user.id });
       return ResponseUtil.success(
         res,
         userResponse,
         "Current user retrieved successfully"
       );
     } catch (error: any) {
+      logger.error("Get current user error", { error: error.message });
       console.error("Get current user error:", error);
       return ResponseUtil.error(res, error.message);
     }
   };
 
   getAllUsers = async (req: AuthenticatedRequest, res: Response) => {
+    logger.info("Get all users request received", { userId: req.user?.id });
     try {
       if (!req.user) {
         return ResponseUtil.unauthorized(res, "Authentication required");
@@ -149,6 +160,10 @@ export class UserController {
         return userResponse;
       });
 
+      logger.info("All users retrieved successfully", {
+        userId: req.user.id,
+        organizationId: req.organizationId,
+      });
       return ResponseUtil.success(
         res,
         usersWithoutPasswords,
@@ -157,12 +172,16 @@ export class UserController {
         result.pagination
       );
     } catch (error: any) {
+      logger.error("Get all users error", { error: error.message });
       console.error("Get all users error:", error);
       return ResponseUtil.error(res, error.message);
     }
   };
 
   getOrganizationUsers = async (req: AuthenticatedRequest, res: Response) => {
+    logger.info("Get organization users request received", {
+      userId: req.user?.id,
+    });
     try {
       const { organizationId } = req.params;
 
@@ -185,18 +204,24 @@ export class UserController {
         return userResponse;
       });
 
+      logger.info("Organization users retrieved successfully", {
+        userId: req.user.id,
+        organizationId,
+      });
       return ResponseUtil.success(
         res,
         usersWithoutPasswords,
         "Organization users retrieved successfully"
       );
     } catch (error: any) {
+      logger.error("Get organization users error", { error: error.message });
       console.error("Get organization users error:", error);
       return ResponseUtil.error(res, error.message);
     }
   };
 
   updateUser = async (req: AuthenticatedRequest, res: Response) => {
+    logger.info("Update user request received", { userId: req.user?.id });
     try {
       const { id } = req.params;
       const { username, role, isActive, profileImage } = req.body;
@@ -232,18 +257,21 @@ export class UserController {
       // Remove password hash from response
       const { passwordHash: _, ...userResponse } = user;
 
+      logger.info("User updated successfully", { userId: user.id });
       return ResponseUtil.success(
         res,
         userResponse,
         "User updated successfully"
       );
     } catch (error: any) {
+      logger.error("Update user error", { error: error.message });
       console.error("Update user error:", error);
       return ResponseUtil.badRequest(res, error.message);
     }
   };
 
   updatePassword = async (req: AuthenticatedRequest, res: Response) => {
+    logger.info("Update password request received", { userId: req.user?.id });
     try {
       const { id } = req.params;
       const { currentPassword, newPassword } = req.body;
@@ -272,14 +300,17 @@ export class UserController {
         newPasswordHash
       );
 
+      logger.info("Password updated successfully", { userId: id });
       return ResponseUtil.success(res, null, "Password updated successfully");
     } catch (error: any) {
+      logger.error("Update password error", { error: error.message });
       console.error("Update password error:", error);
       return ResponseUtil.badRequest(res, error.message);
     }
   };
 
   deactivateUser = async (req: AuthenticatedRequest, res: Response) => {
+    logger.info("Deactivate user request received", { userId: req.user?.id });
     try {
       const { id } = req.params;
 
@@ -300,18 +331,21 @@ export class UserController {
       // Remove password hash from response
       const { passwordHash: _, ...userResponse } = user;
 
+      logger.info("User deactivated successfully", { userId: user.id });
       return ResponseUtil.success(
         res,
         userResponse,
         "User deactivated successfully"
       );
     } catch (error: any) {
+      logger.error("Deactivate user error", { error: error.message });
       console.error("Deactivate user error:", error);
       return ResponseUtil.badRequest(res, error.message);
     }
   };
 
   activateUser = async (req: AuthenticatedRequest, res: Response) => {
+    logger.info("Activate user request received", { userId: req.user?.id });
     try {
       const { id } = req.params;
 
@@ -332,12 +366,14 @@ export class UserController {
       // Remove password hash from response
       const { passwordHash: _, ...userResponse } = user;
 
+      logger.info("User activated successfully", { userId: user.id });
       return ResponseUtil.success(
         res,
         userResponse,
         "User activated successfully"
       );
     } catch (error: any) {
+      logger.error("Activate user error", { error: error.message });
       console.error("Activate user error:", error);
       return ResponseUtil.badRequest(res, error.message);
     }

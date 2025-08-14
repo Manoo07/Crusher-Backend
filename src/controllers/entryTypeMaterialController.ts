@@ -2,6 +2,7 @@ import { EntryType } from "@prisma/client";
 import { Response } from "express";
 import { EntryTypeMaterialService } from "../services/entryTypeMaterialService";
 import { AuthenticatedRequest } from "../types";
+import { logger } from "../utils/logger";
 import { ResponseUtil } from "../utils/response";
 
 export class EntryTypeMaterialController {
@@ -14,6 +15,11 @@ export class EntryTypeMaterialController {
   // GET /api/entry-type-materials - Get all entry-type-material mappings for organization
   getEntryTypeMaterials = async (req: AuthenticatedRequest, res: Response) => {
     try {
+      logger.info("Fetching entry type materials", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+      });
+
       if (!req.user || !req.organizationId) {
         return ResponseUtil.unauthorized(res, "Authentication required");
       }
@@ -23,13 +29,20 @@ export class EntryTypeMaterialController {
           req.organizationId
         );
 
+      logger.info("Entry type materials retrieved successfully", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+      });
+
       return ResponseUtil.success(
         res,
         { entryTypeMaterials },
         "Entry type materials retrieved successfully"
       );
     } catch (error: any) {
-      console.error("Get entry type materials error:", error);
+      logger.error("Get entry type materials error", {
+        error: error.message,
+      });
       return ResponseUtil.error(res, error.message);
     }
   };
@@ -40,6 +53,11 @@ export class EntryTypeMaterialController {
     res: Response
   ) => {
     try {
+      logger.info("Fetching grouped entry type materials", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+      });
+
       if (!req.user || !req.organizationId) {
         return ResponseUtil.unauthorized(res, "Authentication required");
       }
@@ -49,13 +67,20 @@ export class EntryTypeMaterialController {
           req.organizationId
         );
 
+      logger.info("Grouped entry type materials retrieved successfully", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+      });
+
       return ResponseUtil.success(
         res,
         { groupedMaterials },
         "Grouped entry type materials retrieved successfully"
       );
     } catch (error: any) {
-      console.error("Get grouped entry type materials error:", error);
+      logger.error("Get grouped entry type materials error", {
+        error: error.message,
+      });
       return ResponseUtil.error(res, error.message);
     }
   };
@@ -66,6 +91,12 @@ export class EntryTypeMaterialController {
     res: Response
   ) => {
     try {
+      logger.info("Fetching entry type materials by type", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+        entryType: req.params.entryType,
+      });
+
       if (!req.user || !req.organizationId) {
         return ResponseUtil.unauthorized(res, "Authentication required");
       }
@@ -83,13 +114,21 @@ export class EntryTypeMaterialController {
           entryType as EntryType
         );
 
+      logger.info("Entry type materials by type retrieved successfully", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+        entryType: req.params.entryType,
+      });
+
       return ResponseUtil.success(
         res,
         { entryTypeMaterials, entryType },
         `Materials for ${entryType} retrieved successfully`
       );
     } catch (error: any) {
-      console.error("Get entry type materials by type error:", error);
+      logger.error("Get entry type materials by type error", {
+        error: error.message,
+      });
       return ResponseUtil.error(res, error.message);
     }
   };
@@ -100,6 +139,12 @@ export class EntryTypeMaterialController {
     res: Response
   ) => {
     try {
+      logger.info("Creating entry type material", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+        body: req.body,
+      });
+
       if (!req.user || !req.organizationId) {
         return ResponseUtil.unauthorized(res, "Authentication required");
       }
@@ -125,6 +170,11 @@ export class EntryTypeMaterialController {
           materialRateId,
         });
 
+      logger.info("Entry type material created successfully", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+      });
+
       return ResponseUtil.success(
         res,
         { entryTypeMaterial },
@@ -132,7 +182,9 @@ export class EntryTypeMaterialController {
         201
       );
     } catch (error: any) {
-      console.error("Create entry type material error:", error);
+      logger.error("Create entry type material error", {
+        error: error.message,
+      });
       return ResponseUtil.badRequest(res, error.message);
     }
   };
@@ -143,6 +195,12 @@ export class EntryTypeMaterialController {
     res: Response
   ) => {
     try {
+      logger.info("Creating bulk entry type materials", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+        body: req.body,
+      });
+
       if (!req.user || !req.organizationId) {
         return ResponseUtil.unauthorized(res, "Authentication required");
       }
@@ -182,6 +240,11 @@ export class EntryTypeMaterialController {
           mappings
         );
 
+      logger.info("Bulk entry type materials created successfully", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+      });
+
       return ResponseUtil.success(
         res,
         { created: result.count },
@@ -189,7 +252,9 @@ export class EntryTypeMaterialController {
         201
       );
     } catch (error: any) {
-      console.error("Create bulk entry type materials error:", error);
+      logger.error("Create bulk entry type materials error", {
+        error: error.message,
+      });
       return ResponseUtil.badRequest(res, error.message);
     }
   };
@@ -200,6 +265,12 @@ export class EntryTypeMaterialController {
     res: Response
   ) => {
     try {
+      logger.info("Fetching entry type material by ID", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+        id: req.params.id,
+      });
+
       const { id } = req.params;
 
       if (!req.user || !req.organizationId) {
@@ -221,13 +292,21 @@ export class EntryTypeMaterialController {
         return ResponseUtil.forbidden(res, "Access denied");
       }
 
+      logger.info("Entry type material by ID retrieved successfully", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+        id: req.params.id,
+      });
+
       return ResponseUtil.success(
         res,
         { entryTypeMaterial },
         "Entry type material mapping retrieved successfully"
       );
     } catch (error: any) {
-      console.error("Get entry type material by ID error:", error);
+      logger.error("Get entry type material by ID error", {
+        error: error.message,
+      });
       return ResponseUtil.error(res, error.message);
     }
   };
@@ -238,6 +317,13 @@ export class EntryTypeMaterialController {
     res: Response
   ) => {
     try {
+      logger.info("Updating entry type material", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+        id: req.params.id,
+        body: req.body,
+      });
+
       const { id } = req.params;
       const updateData = req.body;
 
@@ -273,13 +359,21 @@ export class EntryTypeMaterialController {
           updateData
         );
 
+      logger.info("Entry type material updated successfully", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+        id: req.params.id,
+      });
+
       return ResponseUtil.success(
         res,
         { entryTypeMaterial },
         "Entry type material mapping updated successfully"
       );
     } catch (error: any) {
-      console.error("Update entry type material error:", error);
+      logger.error("Update entry type material error", {
+        error: error.message,
+      });
       return ResponseUtil.badRequest(res, error.message);
     }
   };
@@ -290,6 +384,12 @@ export class EntryTypeMaterialController {
     res: Response
   ) => {
     try {
+      logger.info("Deleting entry type material", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+        id: req.params.id,
+      });
+
       const { id } = req.params;
 
       if (!req.user || !req.organizationId) {
@@ -320,13 +420,21 @@ export class EntryTypeMaterialController {
 
       await this.entryTypeMaterialService.deleteEntryTypeMaterial(id);
 
+      logger.info("Entry type material deleted successfully", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+        id: req.params.id,
+      });
+
       return ResponseUtil.success(
         res,
         null,
         "Entry type material mapping deleted successfully"
       );
     } catch (error: any) {
-      console.error("Delete entry type material error:", error);
+      logger.error("Delete entry type material error", {
+        error: error.message,
+      });
       return ResponseUtil.badRequest(res, error.message);
     }
   };

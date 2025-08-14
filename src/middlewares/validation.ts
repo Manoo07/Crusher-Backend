@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { AuthenticatedRequest } from "../types";
+import { logger } from "../utils/logger";
 import { ResponseUtil } from "../utils/response";
 
 export class ValidationMiddleware {
@@ -18,6 +19,11 @@ export class ValidationMiddleware {
       }
 
       if (missingFields.length > 0) {
+        logger.warn("Validation failed: Missing required fields", {
+          missingFields,
+          path: req.path,
+          method: req.method,
+        });
         ResponseUtil.badRequest(
           res,
           `Missing required fields: ${missingFields.join(", ")}`
@@ -37,6 +43,11 @@ export class ValidationMiddleware {
     const { email } = req.body;
 
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      logger.warn("Validation failed: Invalid email format", {
+        email,
+        path: req.path,
+        method: req.method,
+      });
       ResponseUtil.badRequest(res, "Invalid email format");
       return;
     }
@@ -52,6 +63,11 @@ export class ValidationMiddleware {
     const { password } = req.body;
 
     if (password && password.length < 6) {
+      logger.warn("Validation failed: Password too short", {
+        passwordLength: password.length,
+        path: req.path,
+        method: req.method,
+      });
       ResponseUtil.badRequest(
         res,
         "Password must be at least 6 characters long"
@@ -77,6 +93,11 @@ export class ValidationMiddleware {
       }
 
       if (invalidFields.length > 0) {
+        logger.warn("Validation failed: Invalid numeric values", {
+          invalidFields,
+          path: req.path,
+          method: req.method,
+        });
         ResponseUtil.badRequest(
           res,
           `Invalid numeric values for fields: ${invalidFields.join(", ")}`
@@ -106,6 +127,11 @@ export class ValidationMiddleware {
       }
 
       if (invalidFields.length > 0) {
+        logger.warn("Validation failed: Invalid date values", {
+          invalidFields,
+          path: req.path,
+          method: req.method,
+        });
         ResponseUtil.badRequest(
           res,
           `Invalid date values for fields: ${invalidFields.join(", ")}`
@@ -126,11 +152,21 @@ export class ValidationMiddleware {
       const { startDate, endDate } = req.query;
 
       if (startDate && isNaN(Date.parse(startDate as string))) {
+        logger.warn("Validation failed: Invalid start date format", {
+          startDate,
+          path: req.path,
+          method: req.method,
+        });
         ResponseUtil.badRequest(res, "Invalid start date format");
         return;
       }
 
       if (endDate && isNaN(Date.parse(endDate as string))) {
+        logger.warn("Validation failed: Invalid end date format", {
+          endDate,
+          path: req.path,
+          method: req.method,
+        });
         ResponseUtil.badRequest(res, "Invalid end date format");
         return;
       }
@@ -140,6 +176,12 @@ export class ValidationMiddleware {
         const end = new Date(endDate as string);
 
         if (end < start) {
+          logger.warn("Validation failed: End date before start date", {
+            startDate,
+            endDate,
+            path: req.path,
+            method: req.method,
+          });
           ResponseUtil.badRequest(res, "End date cannot be before start date");
           return;
         }
@@ -160,6 +202,12 @@ export class ValidationMiddleware {
         /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
       if (!uuid || !uuidRegex.test(uuid)) {
+        logger.warn("Validation failed: Invalid UUID format", {
+          uuid,
+          paramName,
+          path: req.path,
+          method: req.method,
+        });
         ResponseUtil.badRequest(res, `Invalid ${paramName} format`);
         return;
       }
@@ -177,6 +225,11 @@ export class ValidationMiddleware {
       const { page, limit } = req.query;
 
       if (page && (isNaN(Number(page)) || Number(page) < 1)) {
+        logger.warn("Validation failed: Invalid page number", {
+          page,
+          path: req.path,
+          method: req.method,
+        });
         ResponseUtil.badRequest(res, "Page must be a positive number");
         return;
       }
@@ -185,6 +238,11 @@ export class ValidationMiddleware {
         limit &&
         (isNaN(Number(limit)) || Number(limit) < 1 || Number(limit) > 100)
       ) {
+        logger.warn("Validation failed: Invalid limit number", {
+          limit,
+          path: req.path,
+          method: req.method,
+        });
         ResponseUtil.badRequest(
           res,
           "Limit must be a positive number between 1 and 100"

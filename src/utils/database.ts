@@ -6,11 +6,24 @@ class DatabaseConnection {
 
   public static getInstance(): PrismaClient {
     if (!DatabaseConnection.instance) {
+      // Configure Prisma logging based on environment
+      const logLevels: Array<"info" | "query" | "warn" | "error"> = [];
+
+      // Always include error logging
+      logLevels.push("error");
+
+      // Add other log levels based on environment and settings
+      if (process.env.NODE_ENV === "development") {
+        logLevels.push("info", "warn");
+
+        // Only add query logging if explicitly enabled
+        if (process.env.PRISMA_QUERY_LOG === "true") {
+          logLevels.push("query");
+        }
+      }
+
       DatabaseConnection.instance = new PrismaClient({
-        log:
-          process.env.NODE_ENV === "development"
-            ? ["query", "info", "warn", "error"]
-            : ["error"],
+        log: logLevels,
       });
     }
     return DatabaseConnection.instance;

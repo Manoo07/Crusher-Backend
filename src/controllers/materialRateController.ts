@@ -7,6 +7,7 @@ import {
   MaterialTypeWithRate,
   MaterialTypesWithRatesResponse,
 } from "../types";
+import { logger } from "../utils/logger";
 import { ResponseUtil } from "../utils/response";
 
 export class MaterialRateController {
@@ -20,7 +21,16 @@ export class MaterialRateController {
 
   getMaterialRates = async (req: AuthenticatedRequest, res: Response) => {
     try {
+      logger.info("Fetching material rates", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+        query: req.query,
+      });
+
       if (!req.user || !req.organizationId) {
+        logger.warn("Unauthorized access to material rates", {
+          userId: req.user?.id,
+        });
         return ResponseUtil.unauthorized(res, "Authentication required");
       }
 
@@ -28,6 +38,8 @@ export class MaterialRateController {
 
       // If entryType filter is provided, use the bridge table to get filtered results
       if (entryType) {
+        logger.info("Fetching material rates for entry type", { entryType });
+
         // Validate entry type
         if (!Object.values(EntryType).includes(entryType as EntryType)) {
           return ResponseUtil.badRequest(
@@ -58,6 +70,10 @@ export class MaterialRateController {
           entryType: etm.entryType,
         }));
 
+        logger.info("Material rates for entry type retrieved", {
+          entryType,
+          count: filteredRates.length,
+        });
         return ResponseUtil.success(
           res,
           filteredRates,
@@ -71,22 +87,33 @@ export class MaterialRateController {
           req.organizationId
         );
 
+      logger.info("Material rates retrieved successfully", {
+        count: rates.length,
+      });
       return ResponseUtil.success(
         res,
         rates,
         "Material rates retrieved successfully"
       );
     } catch (error: any) {
-      console.error("Get material rates error:", error);
+      logger.error("Error fetching material rates", { error: error.message });
       return ResponseUtil.error(res, error.message);
     }
   };
 
   updateMaterialRate = async (req: AuthenticatedRequest, res: Response) => {
     try {
+      logger.info("Updating material rate", {
+        userId: req.user?.id,
+        body: req.body,
+      });
+
       const { materialType, rate } = req.body;
 
       if (!req.user || !req.organizationId) {
+        logger.warn("Unauthorized access to update material rate", {
+          userId: req.user?.id,
+        });
         return ResponseUtil.unauthorized(res, "Authentication required");
       }
 
@@ -94,6 +121,7 @@ export class MaterialRateController {
       const numericRate = Number(rate);
 
       if (isNaN(numericRate) || numericRate <= 0) {
+        logger.warn("Invalid rate provided", { rate });
         return ResponseUtil.badRequest(
           res,
           "Rate must be a valid number greater than 0"
@@ -108,6 +136,10 @@ export class MaterialRateController {
           updatedBy: req.user.id,
         });
 
+      logger.info("Material rate updated successfully", {
+        materialType,
+        rate: numericRate,
+      });
       return ResponseUtil.success(
         res,
         materialRate,
@@ -115,7 +147,7 @@ export class MaterialRateController {
         201
       );
     } catch (error: any) {
-      console.error("Update material rate error:", error);
+      logger.error("Error updating material rate", { error: error.message });
       return ResponseUtil.badRequest(res, error.message);
     }
   };

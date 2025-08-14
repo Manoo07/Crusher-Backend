@@ -2,6 +2,7 @@ import { Prisma, User } from "@prisma/client";
 import { OrganizationDAO } from "../dao/organizationDAO";
 import { UserDAO } from "../dao/userDAO";
 import { UserFilters } from "../types";
+import { logger } from "../utils/logger";
 import { ValidationUtil } from "../utils/validation";
 
 export class UserService {
@@ -20,6 +21,7 @@ export class UserService {
     organizationId?: string;
     profileImage?: string;
   }): Promise<User> {
+    logger.info("Creating user", { username: data.username });
     // Validate username
     const usernameValidation = ValidationUtil.validateUsername(data.username);
     if (!usernameValidation.isValid) {
@@ -57,7 +59,14 @@ export class UserService {
       };
     }
 
-    return await this.userDAO.create(createData);
+    try {
+      const user = await this.userDAO.create(createData);
+      logger.info("User created successfully", { userId: user.id });
+      return user;
+    } catch (error: any) {
+      logger.error("Error creating user", { error: error.message });
+      throw error;
+    }
   }
 
   async getUserById(id: string): Promise<User | null> {

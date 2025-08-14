@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { OrganizationService } from "../services/organizationService";
 import { UserService } from "../services/userService";
 import { AuthenticatedRequest } from "../types";
+import { logger } from "../utils/logger";
 import { ResponseUtil } from "../utils/response";
 import { ValidationUtil } from "../utils/validation";
 
@@ -18,6 +19,8 @@ export class AuthController {
 
   register = async (req: Request, res: Response) => {
     try {
+      logger.info("Register endpoint called", { body: req.body });
+
       const {
         username,
         password,
@@ -89,6 +92,7 @@ export class AuthController {
       // Remove password from response
       const { passwordHash: _, ...userWithoutPassword } = userResponse;
 
+      logger.info("User registered successfully", { userId: userResponse.id });
       return ResponseUtil.success(
         res,
         {
@@ -103,13 +107,15 @@ export class AuthController {
         201
       );
     } catch (error: any) {
-      console.error("Registration error:", error);
+      logger.error("Registration error", { error: error.message });
       return ResponseUtil.badRequest(res, error.message);
     }
   };
 
   login = async (req: Request, res: Response) => {
     try {
+      logger.info("Login endpoint called", { body: req.body });
+
       const { username, password } = req.body;
 
       const user = await this.userService.getUserByUsername(username);
@@ -154,6 +160,7 @@ export class AuthController {
       // Remove password from response
       const { passwordHash: _, ...userWithoutPassword } = user;
 
+      logger.info("Login successful", { userId: user.id });
       return ResponseUtil.success(
         res,
         {
@@ -168,13 +175,15 @@ export class AuthController {
         "Login successful"
       );
     } catch (error: any) {
-      console.error("Login error:", error);
+      logger.error("Login error", { error: error.message });
       return ResponseUtil.error(res, error.message);
     }
   };
 
   verifyToken = async (req: AuthenticatedRequest, res: Response) => {
     try {
+      logger.info("Verify token endpoint called", { userId: req.user?.id });
+
       if (!req.user) {
         return ResponseUtil.unauthorized(res, "Authentication required");
       }
@@ -182,6 +191,7 @@ export class AuthController {
       // Remove password from response
       const { passwordHash: _, ...userWithoutPassword } = req.user;
 
+      logger.info("Token verification successful", { userId: req.user?.id });
       return ResponseUtil.success(
         res,
         {
@@ -190,23 +200,28 @@ export class AuthController {
         "Token is valid"
       );
     } catch (error: any) {
-      console.error("Token verification error:", error);
+      logger.error("Token verification error", { error: error.message });
       return ResponseUtil.unauthorized(res, "Token verification failed");
     }
   };
 
   logout = async (req: AuthenticatedRequest, res: Response) => {
     try {
+      logger.info("Logout endpoint called", { userId: req.user?.id });
+
       // In a stateless JWT system, logout is handled client-side by removing the token
+      logger.info("Logout successful", { userId: req.user?.id });
       return ResponseUtil.success(res, null, "Logout successful");
     } catch (error: any) {
-      console.error("Logout error:", error);
+      logger.error("Logout error", { error: error.message });
       return ResponseUtil.error(res, error.message);
     }
   };
 
   getProfile = async (req: AuthenticatedRequest, res: Response) => {
     try {
+      logger.info("Get profile endpoint called", { userId: req.user?.id });
+
       if (!req.user) {
         return ResponseUtil.unauthorized(res, "Authentication required");
       }
@@ -228,6 +243,7 @@ export class AuthController {
       // Remove password from response
       const { passwordHash: _, ...userWithoutPassword } = user;
 
+      logger.info("Profile retrieved successfully", { userId: req.user?.id });
       return ResponseUtil.success(
         res,
         {
@@ -238,13 +254,18 @@ export class AuthController {
         "Profile retrieved successfully"
       );
     } catch (error: any) {
-      console.error("Get profile error:", error);
+      logger.error("Get profile error", { error: error.message });
       return ResponseUtil.error(res, error.message);
     }
   };
 
   updateProfile = async (req: AuthenticatedRequest, res: Response) => {
     try {
+      logger.info("Update profile endpoint called", {
+        userId: req.user?.id,
+        body: req.body,
+      });
+
       if (!req.user) {
         return ResponseUtil.unauthorized(res, "Authentication required");
       }
@@ -329,6 +350,7 @@ export class AuthController {
       // Remove password from response
       const { passwordHash: _, ...userWithoutPassword } = updatedUser;
 
+      logger.info("Profile updated successfully", { userId: req.user?.id });
       return ResponseUtil.success(
         res,
         {
@@ -339,13 +361,15 @@ export class AuthController {
         "Profile updated successfully"
       );
     } catch (error: any) {
-      console.error("Update profile error:", error);
+      logger.error("Update profile error", { error: error.message });
       return ResponseUtil.error(res, error.message);
     }
   };
 
   deleteProfile = async (req: AuthenticatedRequest, res: Response) => {
     try {
+      logger.info("Delete profile endpoint called", { userId: req.user?.id });
+
       if (!req.user) {
         return ResponseUtil.unauthorized(res, "Authentication required");
       }
@@ -396,9 +420,10 @@ export class AuthController {
         username: `deleted_${userId}_${Date.now()}`, // Prevent username conflicts
       });
 
+      logger.info("Account deleted successfully", { userId: req.user?.id });
       return ResponseUtil.success(res, null, "Account deleted successfully");
     } catch (error: any) {
-      console.error("Delete profile error:", error);
+      logger.error("Delete profile error", { error: error.message });
       return ResponseUtil.error(res, error.message);
     }
   };

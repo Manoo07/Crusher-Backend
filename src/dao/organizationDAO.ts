@@ -1,10 +1,12 @@
 import { Organization, Prisma } from "@prisma/client";
 import { PaginationParams } from "../types";
 import { prisma } from "../utils/database";
+import { logger } from "../utils/logger";
 
 export class OrganizationDAO {
   async create(data: Prisma.OrganizationCreateInput): Promise<Organization> {
-    return await prisma.organization.create({
+    logger.info("Creating organization in DAO", { data });
+    const result = await prisma.organization.create({
       data,
       include: {
         owner: true,
@@ -18,6 +20,8 @@ export class OrganizationDAO {
         },
       },
     });
+    logger.info("Organization created successfully in DAO", { result });
+    return result;
   }
 
   async createWithoutOwner(data: { name: string }): Promise<Organization> {
@@ -53,7 +57,8 @@ export class OrganizationDAO {
   }
 
   async findById(id: string): Promise<Organization | null> {
-    return await prisma.organization.findUnique({
+    logger.info("Fetching organization by ID in DAO", { id });
+    const result = await prisma.organization.findUnique({
       where: { id },
       include: {
         owner: true,
@@ -67,16 +72,29 @@ export class OrganizationDAO {
         },
       },
     });
+    if (result) {
+      logger.info("Organization found in DAO", { result });
+    } else {
+      logger.warn("Organization not found in DAO", { id });
+    }
+    return result;
   }
 
   async findByOwnerId(ownerId: string): Promise<Organization | null> {
-    return await prisma.organization.findUnique({
+    logger.info("Fetching organization by owner ID in DAO", { ownerId });
+    const result = await prisma.organization.findUnique({
       where: { ownerId },
       include: {
         owner: true,
         users: true,
       },
     });
+    if (result) {
+      logger.info("Organization found for owner in DAO", { result });
+    } else {
+      logger.warn("Organization not found for owner in DAO", { ownerId });
+    }
+    return result;
   }
 
   async findAll(
@@ -90,6 +108,12 @@ export class OrganizationDAO {
     } = params;
     const skip = (page - 1) * limit;
 
+    logger.info("Fetching all organizations in DAO", {
+      page,
+      limit,
+      sortBy,
+      sortOrder,
+    });
     const [organizations, total] = await Promise.all([
       prisma.organization.findMany({
         skip,
@@ -109,7 +133,7 @@ export class OrganizationDAO {
       }),
       prisma.organization.count(),
     ]);
-
+    logger.info("Organizations fetched successfully in DAO", { total });
     return { organizations, total };
   }
 
@@ -117,7 +141,8 @@ export class OrganizationDAO {
     id: string,
     data: Prisma.OrganizationUpdateInput
   ): Promise<Organization> {
-    return await prisma.organization.update({
+    logger.info("Updating organization in DAO", { id, data });
+    const result = await prisma.organization.update({
       where: { id },
       data,
       include: {
@@ -125,21 +150,35 @@ export class OrganizationDAO {
         users: true,
       },
     });
+    logger.info("Organization updated successfully in DAO", { result });
+    return result;
   }
 
   async delete(id: string): Promise<Organization> {
-    return await prisma.organization.delete({
+    logger.info("Deleting organization in DAO", { id });
+    const result = await prisma.organization.delete({
       where: { id },
     });
+    logger.info("Organization deleted successfully in DAO", { result });
+    return result;
   }
 
   async checkNameExists(name: string, excludeId?: string): Promise<boolean> {
+    logger.info("Checking if organization name exists in DAO", {
+      name,
+      excludeId,
+    });
     const organization = await prisma.organization.findFirst({
       where: {
         name,
         ...(excludeId && { id: { not: excludeId } }),
       },
     });
-    return !!organization;
+    const exists = !!organization;
+    logger.info("Organization name existence check completed in DAO", {
+      name,
+      exists,
+    });
+    return exists;
   }
 }

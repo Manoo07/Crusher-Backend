@@ -3,9 +3,16 @@ import { UserController } from "../controllers/userController";
 import { AuthMiddleware } from "../middlewares/auth";
 import { ErrorMiddleware } from "../middlewares/error";
 import { ValidationMiddleware } from "../middlewares/validation";
+import { logger } from "../utils/logger";
 
 const router = Router();
 const userController = new UserController();
+
+// Log route-level events
+router.use((req, res, next) => {
+  logger.info(`User route accessed: ${req.method} ${req.originalUrl}`);
+  next();
+});
 
 // Apply authentication middleware to all user routes
 router.use(AuthMiddleware.authenticate);

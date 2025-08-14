@@ -1,31 +1,49 @@
 import { OtherExpense, Prisma } from "@prisma/client";
 import { ExpenseFilters } from "../types";
 import { prisma } from "../utils/database";
+import { logger } from "../utils/logger";
 
 export class OtherExpenseDAO {
   async create(data: Prisma.OtherExpenseCreateInput): Promise<OtherExpense> {
-    return await prisma.otherExpense.create({
+    logger.info("Creating other expense", { data });
+
+    const result = await prisma.otherExpense.create({
       data,
       include: {
         organization: true,
         user: true,
       },
     });
+
+    logger.info("Other expense created successfully", { expenseId: result.id });
+    return result;
   }
 
   async findById(id: string): Promise<OtherExpense | null> {
-    return await prisma.otherExpense.findUnique({
+    logger.info("Finding other expense by id", { id });
+
+    const result = await prisma.otherExpense.findUnique({
       where: { id },
       include: {
         organization: true,
         user: true,
       },
     });
+
+    if (result) {
+      logger.info("Other expense found", { expenseId: result.id });
+    } else {
+      logger.warn("Other expense not found", { id });
+    }
+
+    return result;
   }
 
   async findAll(
     filters: ExpenseFilters
   ): Promise<{ expenses: OtherExpense[]; total: number }> {
+    logger.info("Finding all other expenses", { filters });
+
     const {
       page = 1,
       limit = 10,
@@ -66,6 +84,8 @@ export class OtherExpenseDAO {
       prisma.otherExpense.count({ where }),
     ]);
 
+    logger.info("Other expenses retrieved", { count: expenses.length, total });
+
     return { expenses, total };
   }
 
@@ -73,6 +93,10 @@ export class OtherExpenseDAO {
     organizationId: string,
     filters: ExpenseFilters
   ): Promise<{ expenses: OtherExpense[]; total: number }> {
+    logger.info("Finding other expenses by organization id", {
+      organizationId,
+    });
+
     const {
       page = 1,
       limit = 10,
@@ -113,6 +137,11 @@ export class OtherExpenseDAO {
       prisma.otherExpense.count({ where }),
     ]);
 
+    logger.info("Other expenses by organization retrieved", {
+      count: expenses.length,
+      total,
+    });
+
     return { expenses, total };
   }
 
@@ -120,7 +149,9 @@ export class OtherExpenseDAO {
     id: string,
     data: Prisma.OtherExpenseUpdateInput
   ): Promise<OtherExpense> {
-    return await prisma.otherExpense.update({
+    logger.info("Updating other expense", { id, data });
+
+    const result = await prisma.otherExpense.update({
       where: { id },
       data,
       include: {
@@ -128,16 +159,26 @@ export class OtherExpenseDAO {
         user: true,
       },
     });
+
+    logger.info("Other expense updated successfully", { expenseId: result.id });
+
+    return result;
   }
 
   async delete(id: string): Promise<OtherExpense> {
-    return await prisma.otherExpense.delete({
+    logger.info("Deleting other expense", { id });
+
+    const result = await prisma.otherExpense.delete({
       where: { id },
       include: {
         organization: true,
         user: true,
       },
     });
+
+    logger.info("Other expense deleted successfully", { expenseId: result.id });
+
+    return result;
   }
 
   async getExpenseStatsByOrganization(
@@ -145,6 +186,12 @@ export class OtherExpenseDAO {
     startDate?: Date,
     endDate?: Date
   ): Promise<any> {
+    logger.info("Getting expense stats by organization", {
+      organizationId,
+      startDate,
+      endDate,
+    });
+
     const where: Prisma.OtherExpenseWhereInput = {
       organizationId,
       isActive: true,
@@ -176,6 +223,11 @@ export class OtherExpenseDAO {
       }),
     ]);
 
+    logger.info("Expense stats retrieved", {
+      totalExpenses,
+      totalAmount: totalAmount._sum.amount || 0,
+    });
+
     return {
       totalExpenses,
       totalAmount: totalAmount._sum.amount || 0,
@@ -193,6 +245,8 @@ export class OtherExpenseDAO {
   async getExpenseTypesByOrganization(
     organizationId: string
   ): Promise<string[]> {
+    logger.info("Getting expense types by organization", { organizationId });
+
     const result = await prisma.otherExpense.findMany({
       where: {
         organizationId,
@@ -201,6 +255,11 @@ export class OtherExpenseDAO {
       select: { expensesName: true },
       distinct: ["expensesName"],
       orderBy: { expensesName: "asc" },
+    });
+
+    logger.info("Expense types retrieved", {
+      count: result.length,
+      organizationId,
     });
 
     return result.map((item) => item.expensesName);

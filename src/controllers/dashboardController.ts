@@ -2,6 +2,7 @@ import { Response } from "express";
 import { DashboardService } from "../services/dashboardService";
 import { AuthenticatedRequest } from "../types";
 import { DateFilterType, DateFilterUtil } from "../utils/dateFilters";
+import { logger } from "../utils/logger";
 import { ResponseUtil } from "../utils/response";
 
 export class DashboardController {
@@ -16,6 +17,12 @@ export class DashboardController {
     res: Response
   ) => {
     try {
+      logger.info("Fetching comprehensive dashboard summary", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+        query: req.query,
+      });
+
       if (!req.user || !req.organizationId) {
         return ResponseUtil.unauthorized(res, "Authentication required");
       }
@@ -64,7 +71,9 @@ export class DashboardController {
         "Comprehensive dashboard summary retrieved successfully"
       );
     } catch (error: any) {
-      console.error("Error getting comprehensive dashboard summary:", error);
+      logger.error("Error getting comprehensive dashboard summary", {
+        error: error.message,
+      });
       return ResponseUtil.error(
         res,
         "Failed to retrieve comprehensive dashboard summary"
@@ -74,6 +83,12 @@ export class DashboardController {
 
   getDashboardSummary = async (req: AuthenticatedRequest, res: Response) => {
     try {
+      logger.info("Fetching dashboard summary", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+        query: req.query,
+      });
+
       if (!req.user || !req.organizationId) {
         return ResponseUtil.unauthorized(res, "Authentication required");
       }
@@ -127,19 +142,32 @@ export class DashboardController {
         },
       };
 
+      logger.info("Dashboard summary retrieved successfully", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+      });
+
       return ResponseUtil.success(
         res,
         responseData,
         "Dashboard summary retrieved successfully"
       );
     } catch (error: any) {
-      console.error("Error getting dashboard summary:", error);
+      logger.error("Error getting dashboard summary", {
+        error: error.message,
+      });
       return ResponseUtil.error(res, "Failed to retrieve dashboard summary");
     }
   };
 
   getFinancialMetrics = async (req: AuthenticatedRequest, res: Response) => {
     try {
+      logger.info("Fetching financial metrics", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+        query: req.query,
+      });
+
       if (!req.user || !req.organizationId) {
         return ResponseUtil.unauthorized(res, "Authentication required");
       }
@@ -193,19 +221,32 @@ export class DashboardController {
         },
       };
 
+      logger.info("Financial metrics retrieved successfully", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+      });
+
       return ResponseUtil.success(
         res,
         responseData,
         "Financial metrics retrieved successfully"
       );
     } catch (error: any) {
-      console.error("Get financial metrics error:", error);
+      logger.error("Get financial metrics error", {
+        error: error.message,
+      });
       return ResponseUtil.error(res, error.message);
     }
   };
 
   getDashboardStats = async (req: AuthenticatedRequest, res: Response) => {
     try {
+      logger.info("Fetching dashboard stats", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+        query: req.query,
+      });
+
       if (!req.user || !req.organizationId) {
         return ResponseUtil.unauthorized(res, "Authentication required");
       }
@@ -219,13 +260,20 @@ export class DashboardController {
         year
       );
 
+      logger.info("Dashboard statistics retrieved successfully", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+      });
+
       return ResponseUtil.success(
         res,
         stats,
         "Dashboard statistics retrieved successfully"
       );
     } catch (error: any) {
-      console.error("Get dashboard stats error:", error);
+      logger.error("Get dashboard stats error", {
+        error: error.message,
+      });
       return ResponseUtil.error(res, error.message);
     }
   };
@@ -235,6 +283,11 @@ export class DashboardController {
     res: Response
   ) => {
     try {
+      logger.info("Fetching available date filters", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+      });
+
       const availableFilters = [
         {
           type: "today",
@@ -315,13 +368,20 @@ export class DashboardController {
         }
       });
 
+      logger.info("Available date filters retrieved successfully", {
+        userId: req.user?.id,
+        organizationId: req.organizationId,
+      });
+
       return ResponseUtil.success(
         res,
         { filters: filtersWithRanges },
         "Available date filters retrieved successfully"
       );
     } catch (error: any) {
-      console.error("Error getting available date filters:", error);
+      logger.error("Error getting available date filters", {
+        error: error.message,
+      });
       return ResponseUtil.error(
         res,
         "Failed to retrieve available date filters"

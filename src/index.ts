@@ -7,19 +7,17 @@ const PORT = process.env.PORT || 3000;
 if (require.main === module) {
   const server = app.listen(PORT, () => {
     logger.info(`🚀 Server is running on port ${PORT}`);
-    logger.info(`📊 Environment: ${process.env.NODE_ENV || "development"}`);
-    logger.info(`📊 API Base URL: http://localhost:${PORT}/api`);
-    logger.info(`📊 Health Check: http://localhost:${PORT}/api/health`);
+    logger.info(`Environment: ${process.env.NODE_ENV || "development"}`);
+    logger.info(`API Base URL: http://localhost:${PORT}/api`);
+    logger.info(`Health Check: http://localhost:${PORT}/api/health`);
     logger.info(
-      `🔧 Database: ${
-        process.env.DATABASE_URL ? "Connected" : "Not configured"
-      }`
+      `Database: ${process.env.DATABASE_URL ? "Connected" : "Not configured"}`
     );
 
     if (process.env.NODE_ENV === "development") {
-      logger.info(`🐛 Development mode - Enhanced logging enabled`);
+      logger.info(`Development mode - Enhanced logging enabled`);
       if (process.env.SKIP_AUTH === "true") {
-        logger.warn(`⚠️  Authentication bypassed for development`);
+        logger.warn(`Authentication bypassed for development`);
       }
     }
   });
@@ -36,17 +34,17 @@ if (require.main === module) {
 
   // Graceful shutdown handlers
   process.on("SIGTERM", async () => {
-    logger.info("🔄 SIGTERM received, shutting down gracefully");
+    logger.info("SIGTERM received, shutting down gracefully");
     server.close(() => {
-      logger.info("✅ HTTP server closed");
+      logger.info("HTTP server closed");
       process.exit(0);
     });
   });
 
   process.on("SIGINT", async () => {
-    logger.info("🔄 SIGINT received, shutting down gracefully");
+    logger.info(" SIGINT received, shutting down gracefully");
     server.close(() => {
-      logger.info("✅ HTTP server closed");
+      logger.info("HTTP server closed");
       process.exit(0);
     });
   });

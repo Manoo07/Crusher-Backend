@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { MaterialRateService } from "../services/materialRateService";
+import { logger } from "../utils/logger";
 import { ResponseUtil } from "../utils/response";
 
 export class ConfigController {
@@ -12,6 +13,10 @@ export class ConfigController {
   // GET /api/config/app
   getAppConfig = async (req: Request, res: Response): Promise<void> => {
     try {
+      logger.info("Fetching app configuration", {
+        userId: (req as any).user.id,
+      });
+
       const user = (req as any).user;
 
       const config = {
@@ -40,7 +45,13 @@ export class ConfigController {
         { config },
         "App configuration retrieved successfully"
       );
-    } catch (error) {
+      logger.info("App configuration retrieved successfully", {
+        userId: (req as any).user.id,
+      });
+    } catch (error: any) {
+      logger.error("Failed to retrieve app configuration", {
+        error: error.message,
+      });
       ResponseUtil.error(res, "Failed to retrieve app configuration", 500);
     }
   };
@@ -48,6 +59,11 @@ export class ConfigController {
   // GET /api/config/rates
   getCurrentRates = async (req: Request, res: Response): Promise<void> => {
     try {
+      logger.info("Fetching current rates", {
+        userId: (req as any).user.id,
+        query: req.query,
+      });
+
       const user = (req as any).user;
       const { units = 10 } = req.query;
 
@@ -70,7 +86,13 @@ export class ConfigController {
         },
         "Current rates retrieved successfully"
       );
-    } catch (error) {
+      logger.info("Current rates retrieved successfully", {
+        userId: (req as any).user.id,
+      });
+    } catch (error: any) {
+      logger.error("Failed to retrieve current rates", {
+        error: error.message,
+      });
       ResponseUtil.error(res, "Failed to retrieve current rates", 500);
     }
   };
@@ -78,6 +100,8 @@ export class ConfigController {
   // POST /api/config/calculate
   calculateTotal = async (req: Request, res: Response): Promise<void> => {
     try {
+      logger.info("Calculating total", { body: req.body });
+
       const { units, ratePerUnit, materialType } = req.body;
 
       if (!units || !ratePerUnit) {
@@ -108,7 +132,9 @@ export class ConfigController {
         },
         "Calculation completed successfully"
       );
-    } catch (error) {
+      logger.info("Calculation completed successfully", { body: req.body });
+    } catch (error: any) {
+      logger.error("Failed to calculate total", { error: error.message });
       ResponseUtil.error(res, "Failed to calculate total", 500);
     }
   };
@@ -116,6 +142,8 @@ export class ConfigController {
   // POST /api/config/validate
   validateTruckEntry = async (req: Request, res: Response): Promise<void> => {
     try {
+      logger.info("Validating truck entry", { body: req.body });
+
       const user = (req as any).user;
       const { truckNumber, entryType, materialType, units, ratePerUnit } =
         req.body;
@@ -208,7 +236,9 @@ export class ConfigController {
         },
         "Validation completed"
       );
-    } catch (error) {
+      logger.info("Validation completed", { body: req.body });
+    } catch (error: any) {
+      logger.error("Failed to validate truck entry", { error: error.message });
       ResponseUtil.error(res, "Failed to validate truck entry", 500);
     }
   };

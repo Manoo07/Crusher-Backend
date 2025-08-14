@@ -4,6 +4,7 @@ import express, { NextFunction, Request, Response } from "express";
 import path from "path";
 import { ErrorMiddleware } from "./middlewares/error";
 import { apiRoutes } from "./routes";
+import { logger } from "./utils";
 import DatabaseConnection from "./utils/database";
 
 // Load environment variables
@@ -42,7 +43,7 @@ const corsOptions = {
         false
       );
     } catch (error: any) {
-      console.error("❌ CORS configuration error:", error.message);
+      logger.error("❌ CORS configuration error:", error.message);
       return callback(new Error("CORS configuration error"), false);
     }
   },
@@ -74,10 +75,7 @@ try {
   app.use(express.json({ limit: "10mb" }));
   app.use(express.urlencoded({ extended: true }));
 } catch (error: any) {
-  console.error(
-    "❌ Error initializing body parsing middleware:",
-    error.message
-  );
+  logger.error("❌ Error initializing body parsing middleware:", error.message);
   process.exit(1);
 }
 
@@ -85,10 +83,10 @@ try {
 if (process.env.NODE_ENV === "development") {
   app.use((req: Request, res: Response, next: NextFunction) => {
     try {
-      console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+      logger.info(`${new Date().toISOString()} - ${req.method} ${req.path}`);
       next();
     } catch (error: any) {
-      console.error("❌ Request logging error:", error.message);
+      logger.error("❌ Request logging error:", error.message);
       next(); // Continue even if logging fails
     }
   });
@@ -98,7 +96,7 @@ if (process.env.NODE_ENV === "development") {
 try {
   app.use("/api", apiRoutes);
 } catch (error: any) {
-  console.error("❌ Error mounting API routes:", error.message);
+  logger.error("❌ Error mounting API routes:", error.message);
   process.exit(1);
 }
 
@@ -111,7 +109,7 @@ app.get("/swagger.yaml", (req: Request, res: Response) => {
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
     res.sendFile(path.join(__dirname, "../swagger.yaml"));
   } catch (error: any) {
-    console.error("❌ Error serving Swagger YAML file:", error.message);
+    logger.error("❌ Error serving Swagger YAML file:", error.message);
     res.status(500).json({
       success: false,
       message: "Failed to serve API documentation",
@@ -133,7 +131,7 @@ app.get("/docs", (req: Request, res: Response) => {
       );
     res.redirect(redirectUrl);
   } catch (error: any) {
-    console.error("❌ Error redirecting to Swagger UI:", error.message);
+    logger.error("❌ Error redirecting to Swagger UI:", error.message);
     res.status(500).json({
       success: false,
       message: "Failed to redirect to API documentation",
@@ -159,7 +157,7 @@ app.get("/api-docs", (req: Request, res: Response) => {
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error(
+    logger.error(
       "❌ Error generating API documentation response:",
       error.message
     );
@@ -185,7 +183,7 @@ app.get("/", (req: Request, res: Response) => {
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error("❌ Error in root endpoint:", error.message);
+    logger.error("❌ Error in root endpoint:", error.message);
     res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -214,7 +212,7 @@ app.get("/health", (req: Request, res: Response) => {
       },
     });
   } catch (error: any) {
-    console.error("❌ Health check failed:", error.message);
+    logger.error("❌ Health check failed:", error.message);
     res.status(503).json({
       status: "ERROR",
       timestamp: new Date().toISOString(),
@@ -240,17 +238,17 @@ app.use(ErrorMiddleware.notFound);
 // Initialize database connection (for serverless, we just get the instance)
 try {
   const dbInstance = DatabaseConnection.getInstance();
-  console.log("🔧 Database client initialized successfully");
+  logger.info("🔧 Database client initialized successfully");
 
   // Test the connection
   if (process.env.NODE_ENV === "development") {
-    console.log("🔍 Testing database connection...");
+    logger.info("Testing database connection...");
     // You could add a simple query here to test the connection
-    console.log("✅ Database connection test passed");
+    logger.info("Database connection test passed");
   }
 } catch (error: any) {
-  console.error("❌ Database initialization failed:", error.message);
-  console.error("🔍 Error details:", {
+  logger.error("❌ Database initialization failed:", error.message);
+  logger.error("🔍 Error details:", {
     name: error.name,
     message: error.message,
     code: error.code,
@@ -259,12 +257,10 @@ try {
 
   // In production, we might want to exit, but in development we can continue
   if (process.env.NODE_ENV === "production") {
-    console.error(
-      "🚨 Exiting due to database connection failure in production"
-    );
+    logger.error("Exiting due to database connection failure in production");
     process.exit(1);
   } else {
-    console.warn(
+    logger.warn(
       "⚠️  Continuing in development mode despite database connection failure"
     );
   }
@@ -272,8 +268,8 @@ try {
 
 // Global unhandled error handlers
 process.on("unhandledRejection", (reason: any, promise: Promise<any>) => {
-  console.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
-  console.error("🔍 Error details:", {
+  logger.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
+  logger.error("Error details:", {
     message: reason?.message,
     name: reason?.name,
     code: reason?.code,
@@ -282,8 +278,8 @@ process.on("unhandledRejection", (reason: any, promise: Promise<any>) => {
 });
 
 process.on("uncaughtException", (error: Error) => {
-  console.error("❌ Uncaught Exception:", error);
-  console.error("🔍 Error details:", {
+  logger.error("❌ Uncaught Exception:", error);
+  logger.error("Error details:", {
     message: error.message,
     name: error.name,
     stack: process.env.NODE_ENV === "development" ? error.stack : undefined,

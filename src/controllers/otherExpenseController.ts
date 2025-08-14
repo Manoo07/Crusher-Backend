@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { OtherExpenseService } from "../services/otherExpenseService";
 import { ExpenseFilters } from "../types";
+import { logger } from "../utils/logger";
 import { ResponseUtil } from "../utils/response";
 
 export class OtherExpenseController {
@@ -13,6 +14,11 @@ export class OtherExpenseController {
   // GET /api/expenses
   getExpenses = async (req: Request, res: Response): Promise<void> => {
     try {
+      logger.info("Fetching expenses", {
+        userId: (req as any).user.id,
+        query: req.query,
+      });
+
       const user = (req as any).user;
       const {
         page = 1,
@@ -58,7 +64,13 @@ export class OtherExpenseController {
         },
         "Expenses retrieved successfully"
       );
-    } catch (error) {
+      logger.info("Expenses retrieved successfully", {
+        userId: (req as any).user.id,
+      });
+    } catch (error: any) {
+      logger.error("Failed to retrieve expenses", {
+        error: error instanceof Error ? error.message : error,
+      });
       ResponseUtil.error(res, "Failed to retrieve expenses", 500);
     }
   };
@@ -66,6 +78,11 @@ export class OtherExpenseController {
   // POST /api/expenses
   createExpense = async (req: Request, res: Response): Promise<void> => {
     try {
+      logger.info("Creating expense", {
+        userId: (req as any).user.id,
+        body: req.body,
+      });
+
       const user = (req as any).user;
       const { expensesName, amount, others, notes } = req.body;
 
@@ -100,7 +117,13 @@ export class OtherExpenseController {
         "Expense created successfully",
         201
       );
-    } catch (error) {
+      logger.info("Expense created successfully", {
+        userId: (req as any).user.id,
+      });
+    } catch (error: any) {
+      logger.error("Failed to create expense", {
+        error: error instanceof Error ? error.message : error,
+      });
       ResponseUtil.error(res, "Failed to create expense", 500);
     }
   };
@@ -108,6 +131,11 @@ export class OtherExpenseController {
   // GET /api/expenses
   getExpenseSummary = async (req: Request, res: Response): Promise<void> => {
     try {
+      logger.info("Fetching expense summary", {
+        userId: (req as any).user.id,
+        query: req.query,
+      });
+
       const user = (req as any).user;
       const { startDate, endDate } = req.query;
 
@@ -126,7 +154,13 @@ export class OtherExpenseController {
         },
         "Expense summary retrieved successfully"
       );
-    } catch (error) {
+      logger.info("Expense summary retrieved successfully", {
+        userId: (req as any).user.id,
+      });
+    } catch (error: any) {
+      logger.error("Failed to retrieve expense summary", {
+        error: error instanceof Error ? error.message : error,
+      });
       ResponseUtil.error(res, "Failed to retrieve expense summary", 500);
     }
   };
@@ -134,6 +168,11 @@ export class OtherExpenseController {
   // GET /api/expenses/:id
   getExpenseById = async (req: Request, res: Response): Promise<void> => {
     try {
+      logger.info("Fetching expense by ID", {
+        userId: (req as any).user.id,
+        expenseId: req.params.id,
+      });
+
       const user = (req as any).user;
       const { id } = req.params;
 
@@ -154,7 +193,13 @@ export class OtherExpenseController {
       }
 
       ResponseUtil.success(res, { expense }, "Expense retrieved successfully");
-    } catch (error) {
+      logger.info("Expense retrieved successfully", {
+        userId: (req as any).user.id,
+      });
+    } catch (error: any) {
+      logger.error("Failed to retrieve expense", {
+        error: error instanceof Error ? error.message : error,
+      });
       ResponseUtil.error(res, "Failed to retrieve expense", 500);
     }
   };
@@ -162,6 +207,12 @@ export class OtherExpenseController {
   // PUT /api/expenses/:id
   updateExpense = async (req: Request, res: Response): Promise<void> => {
     try {
+      logger.info("Updating expense", {
+        userId: (req as any).user.id,
+        expenseId: req.params.id,
+        body: req.body,
+      });
+
       const user = (req as any).user;
       const { id } = req.params;
       const { expensesName, amount, others, notes } = req.body;
@@ -184,7 +235,13 @@ export class OtherExpenseController {
       });
 
       ResponseUtil.success(res, { expense }, "Expense updated successfully");
-    } catch (error) {
+      logger.info("Expense updated successfully", {
+        userId: (req as any).user.id,
+      });
+    } catch (error: any) {
+      logger.error("Failed to update expense", {
+        error: error instanceof Error ? error.message : error,
+      });
       ResponseUtil.error(res, "Failed to update expense", 500);
     }
   };
@@ -192,6 +249,11 @@ export class OtherExpenseController {
   // DELETE /api/expenses/:id
   deleteExpense = async (req: Request, res: Response): Promise<void> => {
     try {
+      logger.info("Deleting expense", {
+        userId: (req as any).user.id,
+        expenseId: req.params.id,
+      });
+
       const user = (req as any).user;
       const { id } = req.params;
 
@@ -208,7 +270,13 @@ export class OtherExpenseController {
       await this.otherExpenseService.deleteExpense(id);
 
       ResponseUtil.success(res, null, "Expense deleted successfully");
-    } catch (error) {
+      logger.info("Expense deleted successfully", {
+        userId: (req as any).user.id,
+      });
+    } catch (error: any) {
+      logger.error("Failed to delete expense", {
+        error: error instanceof Error ? error.message : error,
+      });
       ResponseUtil.error(res, "Failed to delete expense", 500);
     }
   };
@@ -216,6 +284,8 @@ export class OtherExpenseController {
   // GET /api/expenses/types
   getExpenseTypes = async (req: Request, res: Response): Promise<void> => {
     try {
+      logger.info("Fetching expense types", { userId: (req as any).user.id });
+
       const user = (req as any).user;
 
       const types = await this.otherExpenseService.getExpenseTypes(
@@ -229,7 +299,13 @@ export class OtherExpenseController {
         },
         "Expense types retrieved successfully"
       );
-    } catch (error) {
+      logger.info("Expense types retrieved successfully", {
+        userId: (req as any).user.id,
+      });
+    } catch (error: any) {
+      logger.error("Failed to retrieve expense types", {
+        error: error instanceof Error ? error.message : error,
+      });
       ResponseUtil.error(res, "Failed to retrieve expense types", 500);
     }
   };
