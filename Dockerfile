@@ -26,48 +26,67 @@ RUN npm run build
 # -------------------------------------------------------
 FROM node:18-slim AS production
 
-# Install Chrome and dependencies in a single layer with proper cleanup
-RUN apt-get update && apt-get install -y \
+# Use cache mounts and combine RUN commands for faster builds
+RUN --mount=type=cache,target=/var/cache/apt \
+    --mount=type=cache,target=/var/lib/apt/lists \
+    apt-get update && apt-get install -y \
     dumb-init \
     openssl \
-    wget \
-    gnupg \
+    chromium \
+    fonts-liberation \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libcups2 \
+    libdrm2 \
+    libgbm1 \
+    libgtk-3-0 \
+    libnspr4 \
+    libnss3 \
+    libx11-xcb1 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxfixes3 \
+    libxrandr2 \
+    libxss1 \
+    libxtst6 \
     ca-certificates \
-    && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
-    && apt-get update \
-    && apt-get install -y google-chrome-stable \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && rm -rf /src/*.deb
+    libasound2 \
+    libxkbcommon0 \
+    xdg-utils \
+    libu2f-udev \
+    && mkdir -p /tmp/chrome-user-data \
+    && chmod 755 /tmp/chrome-user-data
 
-# Create user and set up directories
-RUN groupadd -r nextjs && useradd -r -g nextjs -G audio,video nextjs \
-    && mkdir -p /home/nextjs/Downloads /app \
-    && chown -R nextjs:nextjs /home/nextjs \
-    && chown -R nextjs:nextjs /app
+# Create user and directories in single layer
+RUN addgroup --system nodejs && adduser --system nextjs \
+    && mkdir -p /tmp/.X11-unix /home/nextjs/.cache/chromium \
+    && chmod 1777 /tmp/.X11-unix \
+    && chown -R nextjs:nodejs /home/nextjs
 
 WORKDIR /app
 
 # Copy package files and install production dependencies
 COPY package*.json ./
-RUN npm ci --only=production --no-audit --no-fund \
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --only=production --no-audit --no-fund \
     && npm cache clean --force
 
 # Copy build artifacts and runtime files
-COPY --from=builder --chown=nextjs:nextjs /app/dist ./dist
-COPY --from=builder --chown=nextjs:nextjs /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=nextjs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/prisma ./prisma
-COPY --chown=nextjs:nextjs public ./public
+COPY --chown=nextjs:nodejs public ./public
 
-# Switch to non-root user
 USER nextjs
 
 # Environment variables
 ENV NODE_ENV=production \
     PORT=3000 \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
     PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
+    CHROME_PATH=/usr/bin/chromium \
+    DISPLAY=:99 \
+    CHROME_DEVEL_SANDBOX=/usr/lib/chromium/chrome_sandbox
 
 EXPOSE 3000
 
