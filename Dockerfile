@@ -1,18 +1,16 @@
 FROM node:18-slim AS builder
 WORKDIR /app
 
-# Install build dependencies - use cache mount for faster rebuilds
-RUN --mount=type=cache,target=/var/cache/apt \
-    --mount=type=cache,target=/var/lib/apt/lists \
-    apt-get update && apt-get install -y \
+# Install build dependencies (without cache mounts)
+RUN apt-get update && apt-get install -y \
     python3 \
     make \
-    g++
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy and install dependencies first (better layer caching)
 COPY package*.json ./
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --no-audit --no-fund
+RUN npm ci --no-audit --no-fund
 
 # Copy source files
 COPY tsconfig*.json ./
@@ -26,10 +24,8 @@ RUN npm run build
 # -------------------------------------------------------
 FROM node:18-slim AS production
 
-# Use cache mounts and combine RUN commands for faster builds
-RUN --mount=type=cache,target=/var/cache/apt \
-    --mount=type=cache,target=/var/lib/apt/lists \
-    apt-get update && apt-get install -y \
+# Install runtime dependencies (without cache mounts)
+RUN apt-get update && apt-get install -y \
     dumb-init \
     openssl \
     chromium \
@@ -55,9 +51,10 @@ RUN --mount=type=cache,target=/var/cache/apt \
     xdg-utils \
     libu2f-udev \
     && mkdir -p /tmp/chrome-user-data \
-    && chmod 755 /tmp/chrome-user-data
+    && chmod 755 /tmp/chrome-user-data \
+    && rm -rf /var/lib/apt/lists/*
 
-# Create user and directories in single layer
+# Create user and directories
 RUN addgroup --system nodejs && adduser --system nextjs \
     && mkdir -p /tmp/.X11-unix /home/nextjs/.cache/chromium \
     && chmod 1777 /tmp/.X11-unix \
@@ -67,8 +64,7 @@ WORKDIR /app
 
 # Copy package files and install production dependencies
 COPY package*.json ./
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --only=production --no-audit --no-fund \
+RUN npm ci --only=production --no-audit --no-fund \
     && npm cache clean --force
 
 # Copy build artifacts and runtime files
