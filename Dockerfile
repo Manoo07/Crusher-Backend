@@ -39,12 +39,32 @@ RUN apt-get update && apt-get install -y \
     libxdamage1 \
     libxfixes3 \
     libxrandr2 \
+    libxss1 \
+    libxtst6 \
+    ca-certificates \
+    fonts-liberation \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
     xdg-utils \
+    libu2f-udev \
  && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/* \
+ && mkdir -p /tmp/chrome-user-data \
+ && chmod 755 /tmp/chrome-user-data
 
 # Create non-root user
 RUN addgroup --system nodejs && adduser --system nextjs
+
+# Create directories for Chrome data and temp files
+RUN mkdir -p /tmp/.X11-unix && \
+    chmod 1777 /tmp/.X11-unix && \
+    mkdir -p /home/nextjs/.cache/chromium && \
+    chown -R nextjs:nodejs /home/nextjs
 
 WORKDIR /app
 
@@ -59,10 +79,14 @@ COPY --chown=nextjs:nodejs public ./public
 
 USER nextjs
 
-# Puppeteer env
+# Puppeteer and Chrome env variables
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV CHROME_PATH=/usr/bin/chromium
+ENV DISPLAY=:99
+ENV CHROME_DEVEL_SANDBOX=/usr/lib/chromium/chrome_sandbox
 
 EXPOSE 3000
 

@@ -179,18 +179,65 @@ export class ReportService {
 
     let browser;
     try {
-      logger.info("Launching Puppeteer browser");
-      browser = await puppeteer.launch({
-        headless: true,
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      });
+      logger.info("Launching Puppeteer browser with Docker-optimized settings");
+
+      // Detect if running in Docker environment
+      const isDocker =
+        process.env.PUPPETEER_EXECUTABLE_PATH ||
+        process.env.NODE_ENV === "production";
+
+      const launchOptions: any = {
+        headless: "new",
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          "--disable-accelerated-2d-canvas",
+          "--no-first-run",
+          "--no-zygote",
+          "--single-process",
+          "--disable-gpu",
+          "--disable-background-timer-throttling",
+          "--disable-backgrounding-occluded-windows",
+          "--disable-renderer-backgrounding",
+          "--disable-features=TranslateUI",
+          "--disable-ipc-flooding-protection",
+          "--disable-crash-reporter",
+          "--disable-breakpad",
+          "--disable-client-side-phishing-detection",
+          "--disable-sync",
+          "--disable-default-apps",
+          "--hide-scrollbars",
+          "--mute-audio",
+          "--disable-extensions",
+        ],
+        timeout: 60000,
+      };
+
+      // Use system Chromium in Docker
+      if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+        launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+        logger.info("Using system Chromium executable", {
+          path: process.env.PUPPETEER_EXECUTABLE_PATH,
+        });
+      }
+
+      browser = await puppeteer.launch(launchOptions);
 
       const page = await browser.newPage();
       await page.setViewport({ width: 1200, height: 1600 });
 
+      // Set reasonable timeouts
+      page.setDefaultTimeout(30000);
+      page.setDefaultNavigationTimeout(30000);
+
       logger.info("Generating PDF HTML content");
       const html = this.generatePdfHTML(reportData);
-      await page.setContent(html, { waitUntil: "networkidle0" });
+
+      await page.setContent(html, {
+        waitUntil: "domcontentloaded",
+        timeout: 20000,
+      });
 
       logger.info("Converting HTML to PDF");
       const pdf = await page.pdf({
@@ -204,6 +251,7 @@ export class ReportService {
         },
         preferCSSPageSize: true,
         displayHeaderFooter: false,
+        timeout: 30000,
       });
 
       logger.info("PDF generated successfully", { size: pdf.length });
@@ -212,7 +260,46 @@ export class ReportService {
       logger.error("Error generating PDF", {
         organizationId: reportData.organization?.id,
         error: (error as Error).message,
+        stack: (error as Error).stack,
       });
+
+      // If PDF generation fails in Docker, provide HTML as fallback
+      const errorMessage = (error as Error).message || "";
+      if (
+        errorMessage.includes("Failed to launch") ||
+        errorMessage.includes("chrome_crashpad_handler") ||
+        errorMessage.includes("Connection reset by peer")
+      ) {
+        logger.warn("PDF generation failed, generating HTML fallback report");
+        const html = this.generatePdfHTML(reportData);
+        const htmlReport = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Report - HTML Version</title>
+  <style>
+    .fallback-notice { 
+      background: #ffeb3b; 
+      padding: 15px; 
+      text-align: center; 
+      margin: 20px 0; 
+      border: 2px solid #f57f17;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="fallback-notice">
+    ⚠️ <strong>Notice:</strong> PDF generation is temporarily unavailable. 
+    This HTML version contains all the same data.
+  </div>
+  ${html}
+</body>
+</html>`;
+        return Buffer.from(htmlReport, "utf8");
+      }
+
       throw error;
     } finally {
       if (browser) {
