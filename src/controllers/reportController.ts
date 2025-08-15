@@ -1,5 +1,5 @@
 import { Response } from "express";
-import moment from "moment";
+import moment from "moment-timezone";
 import { ReportService } from "../services/reportService";
 import { AuthenticatedRequest } from "../types";
 import { logger } from "../utils/logger";
@@ -32,7 +32,7 @@ export class ReportController {
         return;
       }
 
-      const { startDate, endDate } = req.query;
+      const { startDate, endDate, timezone } = req.query;
 
       if (!startDate || !endDate) {
         logger.warn("PDF report generation missing date parameters", {
@@ -40,6 +40,23 @@ export class ReportController {
         });
         ResponseUtil.badRequest(res, "Start date and end date are required");
         return;
+      }
+
+      // Default to IST if timezone not provided
+      const userTimezone = (timezone as string) || "Asia/Kolkata";
+
+      // Validate timezone if provided
+      if (timezone) {
+        try {
+          moment.tz.zone(userTimezone);
+        } catch (error) {
+          logger.warn("Invalid timezone provided", {
+            userId: req.user.id,
+            timezone: userTimezone,
+          });
+          ResponseUtil.badRequest(res, `Invalid timezone: ${userTimezone}`);
+          return;
+        }
       }
 
       // Validate date format
@@ -69,7 +86,8 @@ export class ReportController {
       const reportData = await this.reportService.generateReportData(
         req.organizationId,
         startDate as string,
-        endDate as string
+        endDate as string,
+        userTimezone
       );
 
       // Generate PDF
@@ -127,7 +145,7 @@ export class ReportController {
         return;
       }
 
-      const { startDate, endDate, type } = req.query;
+      const { startDate, endDate, type, timezone } = req.query;
 
       if (!startDate || !endDate) {
         logger.warn("CSV report generation missing date parameters", {
@@ -135,6 +153,23 @@ export class ReportController {
         });
         ResponseUtil.badRequest(res, "Start date and end date are required");
         return;
+      }
+
+      // Default to IST if timezone not provided
+      const userTimezone = (timezone as string) || "Asia/Kolkata";
+
+      // Validate timezone if provided
+      if (timezone) {
+        try {
+          moment.tz.zone(userTimezone);
+        } catch (error) {
+          logger.warn("Invalid timezone provided", {
+            userId: req.user.id,
+            timezone: userTimezone,
+          });
+          ResponseUtil.badRequest(res, `Invalid timezone: ${userTimezone}`);
+          return;
+        }
       }
 
       if (
@@ -170,7 +205,8 @@ export class ReportController {
       const reportData = await this.reportService.generateReportData(
         req.organizationId,
         startDate as string,
-        endDate as string
+        endDate as string,
+        userTimezone
       );
 
       const csvReports = await this.reportService.generateCsvReports(
@@ -246,13 +282,28 @@ export class ReportController {
         return ResponseUtil.unauthorized(res, "Authentication required");
       }
 
-      const { startDate, endDate } = req.query;
+      const { startDate, endDate, timezone } = req.query;
 
       if (!startDate || !endDate) {
         return ResponseUtil.badRequest(
           res,
           "Start date and end date are required"
         );
+      }
+
+      // Default to IST if timezone not provided
+      const userTimezone = (timezone as string) || "Asia/Kolkata";
+
+      // Validate timezone if provided
+      if (timezone) {
+        try {
+          moment.tz.zone(userTimezone);
+        } catch (error) {
+          return ResponseUtil.badRequest(
+            res,
+            `Invalid timezone: ${userTimezone}`
+          );
+        }
       }
 
       // Validate date format
@@ -281,7 +332,8 @@ export class ReportController {
       const reportData = await this.reportService.generateReportData(
         req.organizationId,
         startDate as string,
-        endDate as string
+        endDate as string,
+        userTimezone
       );
 
       return ResponseUtil.success(

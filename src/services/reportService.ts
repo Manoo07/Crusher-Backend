@@ -1,5 +1,5 @@
 import * as csvWriter from "csv-writer";
-import moment from "moment";
+import moment from "moment-timezone";
 import puppeteer from "puppeteer";
 import { logger } from "../utils/logger";
 import { MaterialRateService } from "./materialRateService";
@@ -18,6 +18,7 @@ interface ReportData {
   salesEntries: any[];
   rawStoneEntries: any[];
   expenses: any[];
+  timezone?: string; // Add timezone parameter
   summary: {
     totalSalesAmount: number;
     totalRawStoneAmount: number;
@@ -44,12 +45,14 @@ export class ReportService {
   async generateReportData(
     organizationId: string,
     startDate: string,
-    endDate: string
+    endDate: string,
+    timezone: string = "Asia/Kolkata"
   ): Promise<ReportData> {
     logger.info("Starting report data generation", {
       organizationId,
       startDate,
       endDate,
+      timezone,
     });
 
     try {
@@ -142,6 +145,7 @@ export class ReportService {
         salesEntries,
         rawStoneEntries,
         expenses,
+        timezone, // Include timezone in reportData
         summary: {
           totalSalesAmount,
           totalRawStoneAmount,
@@ -1028,7 +1032,11 @@ export class ReportService {
                     )} - ${moment(dateRange.endDate).format("DD MMM YYYY")}
                 </div>
                 <div class="generated-date">
-                    Generated: ${moment().format("DD MMM YYYY, HH:mm")}
+                    Generated: ${moment()
+                      .tz(reportData.timezone || "Asia/Kolkata")
+                      .format("DD MMM YYYY, HH:mm")} (${
+      reportData.timezone || "Asia/Kolkata"
+    })
                 </div>
             </div>
             

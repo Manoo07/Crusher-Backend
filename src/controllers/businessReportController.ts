@@ -1,5 +1,5 @@
 import { Response } from "express";
-import moment from "moment";
+import moment from "moment-timezone";
 import { OrganizationService } from "../services/organizationService";
 import { ReportService } from "../services/reportService";
 import { AuthenticatedRequest } from "../types";
@@ -19,7 +19,7 @@ export class ReportController {
     res: Response
   ): Promise<void> => {
     try {
-      const { startDate, endDate, organizationId } = req.query;
+      const { startDate, endDate, organizationId, timezone } = req.query;
 
       if (!startDate || !endDate) {
         ResponseUtil.badRequest(res, "Start date and end date are required");
@@ -29,6 +29,19 @@ export class ReportController {
       if (!organizationId) {
         ResponseUtil.badRequest(res, "Organization ID is required");
         return;
+      }
+
+      // Default to IST if timezone not provided
+      const userTimezone = (timezone as string) || "Asia/Kolkata";
+
+      // Validate timezone if provided
+      if (timezone) {
+        try {
+          moment.tz.zone(userTimezone);
+        } catch (error) {
+          ResponseUtil.badRequest(res, `Invalid timezone: ${userTimezone}`);
+          return;
+        }
       }
 
       // Validate date format
@@ -53,7 +66,8 @@ export class ReportController {
       const reportData = await this.reportService.generateReportData(
         organizationId as string,
         startDate as string,
-        endDate as string
+        endDate as string,
+        userTimezone
       );
 
       // Generate PDF
@@ -84,7 +98,7 @@ export class ReportController {
     res: Response
   ): Promise<void> => {
     try {
-      const { startDate, endDate, type, organizationId } = req.query;
+      const { startDate, endDate, type, organizationId, timezone } = req.query;
 
       if (!startDate || !endDate) {
         ResponseUtil.badRequest(res, "Start date and end date are required");
@@ -94,6 +108,19 @@ export class ReportController {
       if (!organizationId) {
         ResponseUtil.badRequest(res, "Organization ID is required");
         return;
+      }
+
+      // Default to IST if timezone not provided
+      const userTimezone = (timezone as string) || "Asia/Kolkata";
+
+      // Validate timezone if provided
+      if (timezone) {
+        try {
+          moment.tz.zone(userTimezone);
+        } catch (error) {
+          ResponseUtil.badRequest(res, `Invalid timezone: ${userTimezone}`);
+          return;
+        }
       }
 
       if (
@@ -129,7 +156,8 @@ export class ReportController {
       const reportData = await this.reportService.generateReportData(
         organizationId as string,
         startDate as string,
-        endDate as string
+        endDate as string,
+        userTimezone
       );
 
       const csvReports = await this.reportService.generateCsvReports(
@@ -192,13 +220,28 @@ export class ReportController {
         return ResponseUtil.unauthorized(res, "Authentication required");
       }
 
-      const { startDate, endDate } = req.query;
+      const { startDate, endDate, timezone } = req.query;
 
       if (!startDate || !endDate) {
         return ResponseUtil.badRequest(
           res,
           "Start date and end date are required"
         );
+      }
+
+      // Default to IST if timezone not provided
+      const userTimezone = (timezone as string) || "Asia/Kolkata";
+
+      // Validate timezone if provided
+      if (timezone) {
+        try {
+          moment.tz.zone(userTimezone);
+        } catch (error) {
+          return ResponseUtil.badRequest(
+            res,
+            `Invalid timezone: ${userTimezone}`
+          );
+        }
       }
 
       // Validate date format
@@ -227,7 +270,8 @@ export class ReportController {
       const reportData = await this.reportService.generateReportData(
         req.organizationId,
         startDate as string,
-        endDate as string
+        endDate as string,
+        userTimezone
       );
 
       return ResponseUtil.success(
