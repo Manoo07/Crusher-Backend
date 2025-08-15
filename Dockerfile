@@ -21,7 +21,7 @@ RUN npm run build
 
 FROM node:18-slim AS production
 
-# Install Chrome and dependencies
+# Install Chrome, locales, and dependencies
 RUN apt-get update && apt-get install -y \
     dumb-init \
     openssl \
@@ -53,19 +53,18 @@ RUN apt-get update && apt-get install -y \
     xdg-utils \
     && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
     && sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
-    && apt-get update \
-    && apt-get install -y google-chrome-stable \
+    && apt-get update && apt-get install -y google-chrome-stable \
+    # Generate and set locale properly
+    && sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen \
     && locale-gen en_US.UTF-8 \
-    && update-locale LANG=en_US.UTF-8 \
+    && update-locale LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8 \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && rm -rf /src/*.deb
+    && rm -rf /var/lib/apt/lists/* /src/*.deb
 
 # Create user and set up directories
 RUN groupadd -r nextjs && useradd -r -g nextjs -G audio,video nextjs \
     && mkdir -p /home/nextjs/Downloads /app \
-    && chown -R nextjs:nextjs /home/nextjs \
-    && chown -R nextjs:nextjs /app
+    && chown -R nextjs:nextjs /home/nextjs /app
 
 WORKDIR /app
 
