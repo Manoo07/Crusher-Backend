@@ -1,5 +1,9 @@
 import { Prisma } from "@prisma/client";
-import { prisma } from "../utils/database";
+import DatabaseWrapper from "../utils/database";
+import { TimezoneAwareDateRange } from "../utils/dateFilters";
+
+// Get the Prisma client instance
+const prisma = DatabaseWrapper.getInstance();
 
 export class DashboardDAO {
   async getComprehensiveDashboardSummary(
@@ -11,7 +15,7 @@ export class DashboardDAO {
       organizationId,
       ...(startDate &&
         endDate && {
-          entryDate: {
+          createdAt: {
             gte: startDate,
             lte: endDate,
           },
@@ -23,7 +27,7 @@ export class DashboardDAO {
       isActive: true,
       ...(startDate &&
         endDate && {
-          date: {
+          createdAt: {
             gte: startDate,
             lte: endDate,
           },
@@ -37,9 +41,8 @@ export class DashboardDAO {
         entryType: "Sales",
       },
       orderBy: {
-        entryDate: "desc",
+        createdAt: "desc",
       },
-      take: 5,
       include: {
         user: {
           select: {
@@ -56,9 +59,8 @@ export class DashboardDAO {
         entryType: "RawStone",
       },
       orderBy: {
-        entryDate: "desc",
+        createdAt: "desc",
       },
-      take: 5,
       include: {
         user: {
           select: {
@@ -74,7 +76,6 @@ export class DashboardDAO {
       orderBy: {
         createdAt: "desc",
       },
-      take: 5,
     });
 
     // Get aggregated data
@@ -185,7 +186,7 @@ export class DashboardDAO {
       organizationId,
       ...(startDate &&
         endDate && {
-          entryDate: {
+          createdAt: {
             gte: startDate,
             lte: endDate,
           },
@@ -219,7 +220,7 @@ export class DashboardDAO {
           isActive: true,
           ...(startDate &&
             endDate && {
-              date: {
+              createdAt: {
                 gte: startDate,
                 lte: endDate,
               },
@@ -244,7 +245,7 @@ export class DashboardDAO {
           organizationId,
         },
         orderBy: {
-          entryDate: "desc",
+          createdAt: "desc",
         },
         take: 10,
         include: {
@@ -280,7 +281,7 @@ export class DashboardDAO {
       organizationId,
       ...(startDate &&
         endDate && {
-          entryDate: {
+          createdAt: {
             gte: startDate,
             lte: endDate,
           },
@@ -310,13 +311,13 @@ export class DashboardDAO {
 
   async getMonthlyRevenue(organizationId: string, year: number) {
     const startDate = new Date(year, 0, 1);
-    const endDate = new Date(year, 11, 31);
+    const endDate = new Date(year, 11, 31, 23, 59, 59, 999);
 
     const result = await prisma.truckEntry.groupBy({
-      by: ["entryDate"],
+      by: ["createdAt"],
       where: {
         organizationId,
-        entryDate: {
+        createdAt: {
           gte: startDate,
           lte: endDate,
         },
@@ -330,7 +331,7 @@ export class DashboardDAO {
     const monthlyData = new Map<number, number>();
 
     result.forEach((item) => {
-      const month = item.entryDate.getMonth();
+      const month = item.createdAt.getMonth();
       const revenue = item._sum.totalAmount?.toNumber() || 0;
       monthlyData.set(month, (monthlyData.get(month) || 0) + revenue);
     });
@@ -356,12 +357,23 @@ export class DashboardDAO {
     }));
   }
 
-  async getTopMaterials(organizationId: string, limit: number = 5) {
+  async getTopMaterials(
+    organizationId: string,
+    dateFilters?: TimezoneAwareDateRange,
+    limit: number = 10
+  ) {
+    const whereClause: any = { organizationId };
+
+    if (dateFilters) {
+      whereClause.createdAt = {
+        gte: dateFilters.startDate,
+        lte: dateFilters.endDate,
+      };
+    }
+
     const result = await prisma.truckEntry.groupBy({
       by: ["materialType"],
-      where: {
-        organizationId,
-      },
+      where: whereClause,
       _sum: {
         totalAmount: true,
         units: true,

@@ -218,6 +218,10 @@ export class ReportService {
           "--max_old_space_size=4096",
           "--disable-web-security",
           "--disable-features=VizDisplayCompositor",
+          "--font-render-hinting=none",
+          "--enable-font-antialiasing",
+          "--force-color-profile=generic-rgb",
+          "--disable-lcd-text",
         ],
         timeout: 120000,
         protocolTimeout: 60000,
@@ -236,6 +240,12 @@ export class ReportService {
       browser = await puppeteer.launch(launchOptions);
 
       const page = await browser.newPage();
+
+      // Set page encoding and content
+      await page.setExtraHTTPHeaders({
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Charset": "utf-8",
+      });
 
       // Optimize page settings
       await page.setViewport({
@@ -269,6 +279,8 @@ export class ReportService {
         preferCSSPageSize: true,
         displayHeaderFooter: false,
         timeout: 60000,
+        tagged: true, // For better text extraction
+        omitBackground: false, // Ensure background colors are included
       });
 
       logger.info("PDF generated successfully", { size: pdf.length });
@@ -498,11 +510,14 @@ export class ReportService {
 
     return `
     <!DOCTYPE html>
-    <html>
+    <html lang="en">
     <head>
         <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>${organization.name} - Business Report</title>
         <style>
+            @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&display=swap');
+            
             * {
                 margin: 0;
                 padding: 0;
@@ -510,10 +525,14 @@ export class ReportService {
             }
             
             body {
-                font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+                font-family: 'Noto Sans', 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
                 color: #1a1a1a;
                 line-height: 1.5;
                 background: #ffffff;
+                font-feature-settings: "kern" 1, "liga" 1;
+                text-rendering: optimizeLegibility;
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
             }
             
             .container {

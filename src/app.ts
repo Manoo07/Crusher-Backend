@@ -2,6 +2,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express, { NextFunction, Request, Response } from "express";
 import path from "path";
+import { DatabaseMiddleware } from "./middlewares/database";
 import { ErrorMiddleware } from "./middlewares/error";
 import { apiRoutes } from "./routes";
 import { logger } from "./utils";
@@ -91,6 +92,10 @@ if (process.env.NODE_ENV === "development") {
     }
   });
 }
+
+// Database middleware for connection management
+app.use(DatabaseMiddleware.ensureConnection());
+app.use(DatabaseMiddleware.withRetry());
 
 // API Routes
 try {
@@ -229,7 +234,8 @@ app.get("/health", (req: Request, res: Response) => {
   }
 });
 
-// Global error handler
+// Global error handlers
+app.use(DatabaseMiddleware.handleDatabaseErrors());
 app.use(ErrorMiddleware.handleErrors);
 
 // 404 handler (must be last)

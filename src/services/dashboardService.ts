@@ -130,6 +130,7 @@ export class DashboardService {
 
     const result = await this.dashboardDAO.getTopMaterials(
       organizationId,
+      undefined, // No date filters
       limit
     );
 

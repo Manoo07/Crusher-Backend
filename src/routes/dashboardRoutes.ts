@@ -16,6 +16,12 @@ router.use(AuthMiddleware.requireActiveUser());
 // router.use(TimezoneMiddleware.validateTimezone());
 // router.use(TimezoneMiddleware.addTimezoneHeaders());
 
+// Get available timezones
+router.get(
+  "/timezones",
+  ErrorMiddleware.asyncHandler(dashboardController.getAvailableTimezones)
+);
+
 // Get available date filters
 router.get(
   "/filters",
